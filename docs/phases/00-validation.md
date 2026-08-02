@@ -5,6 +5,14 @@
 
 **Goal:** Confirm the cluster is ready before installing anything.
 
+**Optional — persist session parameters** in a local env file (gitignored):
+
+```bash
+cp cluster.env.example cluster.env   # once
+# Edit CLOUD, TLS_ISSUER, AWS_INSTANCE_TYPE, GPU_AZS, etc.
+source ./cluster.env                 # each new shell; auto-derives CLUSTER_DOMAIN, AWS_REGION, INFRA_ID, AMI_ID
+```
+
 **Run the preflight script first — it covers all required checks:**
 
 ```bash

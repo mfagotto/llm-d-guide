@@ -88,11 +88,12 @@ This repository includes an [`AGENTS.md`](AGENTS.md) file that gives Claude Code
 
 1. Open this repository in Claude Code or OpenCode — the tool will read `AGENTS.md` automatically.
 2. Make sure you are logged in to the cluster (`oc whoami`).
-3. Tell the assistant which phase you are on and provide any environment variables it asks for:
+3. Optionally persist parameters: `cp cluster.env.example cluster.env`, edit, then `source ./cluster.env` (auto-derives region, infra ID, AMI, and cluster domain when `oc` is ready).
+4. Tell the assistant which phase you are on and provide any environment variables it asks for (or confirm you sourced `cluster.env`):
 
-   > *"I'm on Phase 0. My AWS region is `eu-west-1`. Let's start the preflight checks."*
+   > *"I'm on Phase 0. I sourced cluster.env. Let's start the preflight checks."*
 
-4. After each phase the assistant will report a **human gate** — a set of conditions you need to confirm before it proceeds.
+5. After each phase the assistant will report a **human gate** — a set of conditions you need to confirm before it proceeds.
 
 ### Phase overview
 
@@ -222,8 +223,8 @@ See: [NVIDIA GPU Operator on Red Hat OpenShift Container Platform](https://docs.
 
 > **Optional — larger GPU tier.** The NVIDIA L40S (48 GB VRAM) is suited for larger models (e.g. 70B+ parameters) that exceed the 24 GB limit of the A10G. It is available on the `g6e` instance family. Use this section instead of (or in addition to) the A10G section above.
 >
-> - **All 3 AZs** (`a b c`) — recommended for production. Creates 3 MachineSets, one per AZ.
-> - **Single AZ** — sufficient for a single-model test deployment. Replace `for AZ in a b c` with `for AZ in a`.
+> - **All 3 AZs** (`GPU_AZS="a b c"`) — recommended for production. Creates 3 MachineSets, one per AZ (cluster must already span those AZs).
+> - **Single AZ** — sufficient for a single-model test deployment (`GPU_AZS="a"`).
 >
 > The `AMI_ID` must be the same RHCOS AMI used by your existing worker nodes. Retrieve it from a running MachineSet: `oc get machineset -n openshift-machine-api <name> -o jsonpath='{.spec.template.spec.providerSpec.value.ami.id}'`
 
@@ -244,10 +245,11 @@ export AMI_ID=$(oc get machineset -n openshift-machine-api \
 export AWS_INSTANCE_TYPE="${AWS_INSTANCE_TYPE:=g6e.2xlarge}"
 export AWS_INSTANCES_PER_AZ=${AWS_INSTANCES_PER_AZ:=1}
 
-echo "INFRA_ID=${INFRA_ID}, AWS_REGION=${AWS_REGION}, AMI_ID=${AMI_ID}, AWS_INSTANCE_TYPE=${AWS_INSTANCE_TYPE}"
+export GPU_AZS="${GPU_AZS:=a b c}"   # or source ./cluster.env
 
-# All 3 AZs (production). Change to "for AZ in a" for a single-AZ test setup.
-for AZ in a b c; do
+echo "INFRA_ID=${INFRA_ID}, AWS_REGION=${AWS_REGION}, AMI_ID=${AMI_ID}, AWS_INSTANCE_TYPE=${AWS_INSTANCE_TYPE}, GPU_AZS=${GPU_AZS}"
+
+for AZ in ${GPU_AZS}; do
   helm template gpu-worker ./gitops/instance/machine-sets/gpu-worker \
     --set infrastructureId="${INFRA_ID}" \
     --set region=${AWS_REGION} \
