@@ -6,15 +6,16 @@ Goal:     Confirm the cluster is ready before installing anything.
 Time:     ~5 min
 
 Steps:
-  1. Run ./scripts/preflight-validation.sh
-  2. Auto-derive: CLUSTER_DOMAIN, AWS_REGION, INFRA_ID, AMI_ID
-  3. Ask user: CLOUD (aws / none)
-  4. Ask user: TLS_ISSUER (letsencrypt / local-ca)
-  5. Ask user: AWS_INSTANCE_TYPE (if CLOUD=aws)
+  1. Optional: cp cluster.env.example cluster.env → edit → source ./cluster.env
+  2. Run ./scripts/preflight-validation.sh
+  3. Auto-derive: CLUSTER_DOMAIN, AWS_REGION, INFRA_ID, AMI_ID
+  4. Ask user: CLOUD (aws / none)
+  5. Ask user: TLS_ISSUER (letsencrypt / local-ca)
+  6. Ask user: AWS_INSTANCE_TYPE + GPU_AZS (if CLOUD=aws)
 
 Human gate:
   - All preflight checks pass
-  - Environment variables confirmed
+  - Environment variables confirmed (persist in cluster.env if used)
 
 Guide: docs/phases/00-validation.md
 ══════════════════════════════════════════════════════════════

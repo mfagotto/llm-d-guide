@@ -35,8 +35,11 @@ llm-d-guide/
 ├── scripts/
 │   ├── check-operators.sh           # Validates all required operators are Succeeded
 │   └── preflight-validation.sh      # Pre-flight cluster checks with pass/fail summary
+├── cluster.env.example              # Template for local session parameters (copy → cluster.env)
 ├── docs/
 │   ├── phases/                      # Step-by-step phase guides (loaded on demand)
 │   └── reference/                   # Validation commands, MaaS troubleshooting
 └── README.md                        # Full installation guide
 ```
+
+> `cluster.env` is gitignored. Copy from `cluster.env.example`, edit, and `source ./cluster.env`.

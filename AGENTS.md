@@ -28,6 +28,16 @@ troubleshooting) is in [`docs/reference/`](docs/reference/).
 
 ## Environment Variables
 
+### Optional local env file
+
+Copy [`cluster.env.example`](cluster.env.example) to `cluster.env` (gitignored), set user choices, and
+`source ./cluster.env` at the start of each shell session. Sourcing auto-derives `CLUSTER_DOMAIN`,
+`AWS_REGION`, `INFRA_ID`, and `AMI_ID` when `oc` is logged in with sufficient access.
+
+Assistants: if `cluster.env` exists, remind the user to source it. Prefer values already set in the
+environment over re-asking, but **still confirm** `CLOUD` and `TLS_ISSUER` when unset — never invent
+them from example defaults. Do not commit `cluster.env` (it may contain `HF_TOKEN`).
+
 ### Auto-derived — run these commands, never ask the user
 
 | Variable | Command | Used in |
@@ -47,6 +57,7 @@ troubleshooting) is in [`docs/reference/`](docs/reference/).
 | `TLS_ISSUER` | TLS certificate issuer: `letsencrypt` (Route53 DNS-01, requires AWS + public DNS) or `local-ca` (local CA chain via cert-manager, works on any platform). **Must be confirmed before Phase 1.** | `letsencrypt` | Phase 1 |
 | `AWS_INSTANCE_TYPE` | GPU instance type | `g5.2xlarge` | Phase 2 |
 | `AWS_INSTANCES_PER_AZ` | GPU nodes per availability zone | `1` | Phase 2 |
+| `GPU_AZS` | AZ suffixes for GPU MachineSets (must already exist on the cluster). Space-separated. | `a` or `a b c` | Phase 2 |
 | `RHOAI_OLM_PROFILE` | RHOAI **operator** install preset: `stable` (default) = `stable-3.x`; `ea` = `beta` channel. Verify current CSV via `packagemanifest` before use. Passed to `helm template ./gitops/operators/rhoai --set olmProfile=...` | `stable` | Phase 3 |
 | `HF_TOKEN` | HuggingFace token for gated models | `hf_...` | Phase 5 |
 | `GATEWAY_NAME` | Name for the llm-d gateway | `openshift-ai-inference` | Phase 5, 6 |
@@ -78,7 +89,7 @@ troubleshooting) is in [`docs/reference/`](docs/reference/).
 
 ### Phase 0 — Cluster Validation
 Confirm the cluster is ready: OCP 4.19+ (llm-d requires 4.20+; tested on 4.21), cluster admin access, default StorageClass, no ODH or Service Mesh 2.x.
-**Critical:** Derive auto-derived variables from the cluster (see table above). Ask the user whether their infrastructure is running on AWS. Then ask whether they want Let's Encrypt or a local CA for TLS (see `TLS_ISSUER` in the Environment Variables table). If on AWS, also ask for `AWS_INSTANCE_TYPE`.
+**Critical:** Optionally create/source `cluster.env` from `cluster.env.example`. Derive auto-derived variables from the cluster (see table above). Ask the user whether their infrastructure is running on AWS. Then ask whether they want Let's Encrypt or a local CA for TLS (see `TLS_ISSUER` in the Environment Variables table). If on AWS, also ask for `AWS_INSTANCE_TYPE` and `GPU_AZS` (AZ suffixes that already exist on the cluster).
 **Full guide:** [docs/phases/00-validation.md](docs/phases/00-validation.md)
 
 ### Phase 1 — TLS Certificate Automation
@@ -146,9 +157,11 @@ Deploy the MaaS gateway, configure Authorino TLS, bootstrap the subscription sta
 
 At the beginning of each session, say which tool you use and your phase, for example:
 
-> *"I'm on Phase \<N\> (agent). My env vars: CLOUD=aws AWS_INSTANCE_TYPE=g5.2xlarge [etc.]. Let's continue."*
+> *"I'm on Phase \<N\> (agent). I sourced `cluster.env`. Let's continue."*
 >
-> Note: `AWS_REGION`, `AMI_ID`, `INFRA_ID`, and `CLUSTER_DOMAIN` are derived from the cluster — the assistant should run the lookup commands rather than asking for them.
+> Or paste key vars: *"I'm on Phase \<N\> (agent). My env vars: CLOUD=aws TLS_ISSUER=letsencrypt AWS_INSTANCE_TYPE=g5.2xlarge [etc.]. Let's continue."*
+>
+> Note: `AWS_REGION`, `AMI_ID`, `INFRA_ID`, and `CLUSTER_DOMAIN` are derived from the cluster (or via `source ./cluster.env`) — the assistant should run the lookup commands rather than asking for them.
 
 If something went wrong, paste the failing command and its output and say which phase you were on. The assistant should diagnose without restarting from scratch.
 

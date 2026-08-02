@@ -23,9 +23,10 @@ Do NOT decide this yourself — the number of GPU nodes affects cost and schedul
    export AWS_INSTANCE_TYPE="${AWS_INSTANCE_TYPE:=g5.2xlarge}"
    export AWS_INSTANCES_PER_AZ=1
 
-   # All 3 AZs → 3 MachineSets, one per AZ (3 GPU nodes total)
-   # Single AZ → replace "a b c" with just "a" (or the user's chosen AZ)
-   for AZ in a b c; do
+   # GPU_AZS from cluster.env (or the AZ choice confirmed above).
+   # Example: GPU_AZS="a b c" → 3 MachineSets; GPU_AZS="a" → one AZ.
+   # AZs must already exist on the cluster (private subnets / worker MachineSets).
+   for AZ in ${GPU_AZS}; do
      helm template gpu-worker ./gitops/instance/machine-sets/gpu-worker \
        --set infrastructureId="${INFRA_ID}" \
        --set region=${AWS_REGION} \
@@ -35,7 +36,7 @@ Do NOT decide this yourself — the number of GPU nodes affects cost and schedul
        --set az=${AZ} | oc apply -f -
    done
    ```
-   Use the AZ choice the user confirmed above. **Do not default to a single AZ** without explicit user approval — 3 AZs means 3 separate MachineSets, 3 GPU nodes.
+   Use the AZ choice the user confirmed above (`GPU_AZS`). **Do not default to a single AZ** without explicit user approval — `a b c` means 3 separate MachineSets, 3 GPU nodes.
 
 2. NFD + NVIDIA GPU operators:
    ```bash
