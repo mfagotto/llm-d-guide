@@ -248,6 +248,84 @@ oc patch llminferenceservice <name> -n <namespace> \
 The gen-ai-ui crash loop stops immediately after the patch. Upstream fix needed in
 `gen-ai-ui` at `token_k8s_client.go` to nil-guard `spec.model.name`.
 
+## MaaSSubscription and MaaSAuthPolicy stuck after creation — stale status race condition
+
+**Affected version:** RHOAI 3.4.2 (maas-controller shipped with this release)
+
+**Symptom:** After creating (or deleting and recreating) MaaS resources, one or both of:
+
+- `MaaSSubscription` shows no `phase` (blank), and API keys created against it fail with
+  `"subscription is in unreconciled phase (allowed: Active, Degraded)"`.
+- `MaaSAuthPolicy` shows `Phase: Degraded` with message `AuthPolicy waiting for the following
+  components to sync: [AuthConfig (...)]`, even though the underlying Kuadrant `AuthPolicy` is
+  `Accepted + Enforced` and all `AuthConfig` resources are `Ready: True`.
+
+Both can happen simultaneously. The `MaaSAuthPolicy` issue can also cascade — deleting and
+recreating one policy causes previously-Active policies to flip to `Degraded` as the shared
+`AuthPolicy` is rebuilt.
+
+**Root cause:** Two distinct races in the maas-controller:
+
+1. **MaaSSubscription:** When multiple subscriptions are created at once, the controller's
+   status update for one can fail with `"the object has been modified; please apply your
+   changes to the latest version"` due to a stale `resourceVersion`. The controller does not
+   retry, so the subscription is left with no `phase` field indefinitely.
+
+2. **MaaSAuthPolicy:** When the controller rebuilds the shared Kuadrant `AuthPolicy` for a
+   model, there is a brief window where `AuthConfig` resources are being re-synced by
+   Authorino. The controller snapshots the `AuthPolicy` status during this transient window
+   and writes `NotEnforced`. Once the `AuthConfig` resources finish syncing and the
+   `AuthPolicy` transitions to `Enforced`, the controller does not re-reconcile — the stale
+   `Degraded` status persists indefinitely.
+
+**Diagnosis:**
+
+```bash
+# Check subscription and auth policy status
+oc get maassubscription -n models-as-a-service
+oc get maasauthpolicy -n models-as-a-service
+
+# Verify the underlying Kuadrant AuthPolicy is actually enforced
+oc get authpolicy maas-auth-<model-name> -n <model-namespace> \
+  -o jsonpath='{.status.conditions}' | python3 -m json.tool
+# Expected: Accepted: True, Enforced: True
+
+# Verify AuthConfigs are ready
+oc get authconfig -n kuadrant-system \
+  -o custom-columns='NAME:.metadata.name,READY:.status.conditions[?(@.type=="Ready")].status'
+# Expected: all True
+
+# Check maas-controller logs for the race
+oc logs deployment/maas-controller -n redhat-ods-applications --tail=50 \
+  | grep -i 'failed to update\|the object has been modified'
+```
+
+If the Kuadrant resources are healthy but `MaaSSubscription` or `MaaSAuthPolicy` show stale
+status, the controller lost the race.
+
+**Fix:** Restart the maas-controller to force a clean reconciliation:
+
+```bash
+oc rollout restart deployment/maas-controller -n redhat-ods-applications
+oc rollout status deployment/maas-controller -n redhat-ods-applications --timeout=60s
+```
+
+All `MaaSAuthPolicy` and `MaaSSubscription` resources should transition to `Active` within
+~15 seconds.
+
+If a `MaaSSubscription` remains stuck after the restart (rare), delete and recreate it:
+
+```bash
+oc delete maassubscription <name> -n models-as-a-service
+# re-apply the original manifest
+```
+
+**Impact:** The underlying auth and rate-limit enforcement (Kuadrant `AuthPolicy` and
+`TokenRateLimitPolicy`) are unaffected — requests are correctly authenticated and rate-limited.
+The exception is `MaaSSubscription` with a missing `phase`: API keys created while the
+subscription was in this state return 403 or the `"unreconciled phase"` error. Revoke and
+recreate the key after the controller restart fixes the status.
+
 ## MaaSAuthPolicy status loop — harmless
 
 The maas-controller may log `"failed to update MaaSAuthPolicy status"` in a tight loop. This is a
