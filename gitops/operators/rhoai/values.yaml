@@ -33,7 +33,7 @@ startingCSV: ""
 
 subscription:
   name: rhods-operator
-  installPlanApproval: Automatic
+  installPlanApproval: Manual
   source: redhat-operators
   sourceNamespace: openshift-marketplace
 

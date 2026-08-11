@@ -12,3 +12,4 @@ resume.claude.*
 archive/
 legacy*/
 cluster.env
+.maas-db-password
