@@ -114,7 +114,7 @@ Install Connectivity Link, LeaderWorkerSet, **monitoring operators (Tempo, OpenT
 - Do NOT install Kueue unless explicitly required. 
 - `modelsAsService` must be `false` during this phase. 
 - Apply connectivity-link first — Authorino must be running before RHOAI.
-**RHCL version pinning:** Pin RHCL to v1.3.x — v1.4.0 has a Wasm shim bug that breaks MaaS auth. Revisit when RHOAI 3.5 is GA.
+**RHCL version pinning:** Pin RHCL to v1.3.x — v1.4.0 has a Wasm shim bug that breaks MaaS auth. Use `./scripts/approve-rhcl-installplan.sh` (never bulk-approve openshift-operators InstallPlans). Downgrade: [docs/reference/rhcl-version-pin.md](docs/reference/rhcl-version-pin.md). Revisit when RHOAI 3.5 is GA.
 **Kuadrant `Ready: False` after creating the CR** — this is **expected** at this phase. The operator requires a `GatewayClass` to report `Ready: True`, but the GatewayClass is created in Phase 5. Verify Authorino and Limitador pods are running in `kuadrant-system` — that confirms the operator is functional. Kuadrant becomes `Ready` in Phase 5 after the gateway is deployed and the operator pod is restarted. Do not search the marketplace or install any gateway operator.
 **Full guide:** [docs/phases/03-operators-rhoai.md](docs/phases/03-operators-rhoai.md)
 
