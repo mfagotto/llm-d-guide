@@ -38,11 +38,17 @@ connectivity-link operator  →  Kuadrant CR (observability enabled, Ready defer
 
 ```bash
 oc apply -k ./gitops/operators/connectivity-link
-# InstallPlan may require manual approval due to dependencies
-oc get installplan -n openshift-operators | grep -i "requiresapproval"
-# If an InstallPlan is pending, approve it:
-# oc patch installplan <NAME> -n openshift-operators --type merge -p '{"spec":{"approved":true}}'
-oc get csv -n openshift-operators -w | grep -E "rhcl|authorino|limitador"
+
+# InstallPlan uses Manual approval. NEVER bulk-approve every plan in openshift-operators —
+# that upgrades RHCL to 1.4.x even though startingCSV is pinned to 1.3.6.
+./scripts/approve-rhcl-installplan.sh          # list pending; REJECT = do not approve
+./scripts/approve-rhcl-installplan.sh --approve # approve only safe 1.3.x RHCL/Kuadrant plans
+
+oc wait --for=jsonpath='{.status.phase}'=Succeeded \
+  csv/rhcl-operator.v1.3.6 -n openshift-operators --timeout=600s
+oc get csv -n openshift-operators | grep -E 'rhcl|authorino|limitador|dns'
+# RHCL must be v1.3.6 (not 1.4.x). See docs/reference/rhcl-version-pin.md
+
 # Wait for AuthPolicy CRD
 oc wait --for=condition=Established crd/authpolicies.kuadrant.io --timeout=300s
 ```
@@ -294,10 +300,12 @@ oc wait --for=jsonpath='{.status.phase}'=Succeeded csv -n grafana-operator \
 ---
 
 **Human gates:**
-- **InstallPlan approvals:** Some operators require manual approval. The assistant should check and list pending plans, but you must confirm before it patches them.
+- **RHCL InstallPlan approvals:** Use `./scripts/approve-rhcl-installplan.sh` only — never bulk-approve all pending plans in `openshift-operators`. See [RHCL version pin](../reference/rhcl-version-pin.md).
+- **Other InstallPlan approvals:** List pending plans per operator namespace; confirm before patching (COO, Tempo, etc. each have their own phase steps).
 - **CSV verification:** Run `./scripts/check-operators.sh` at the end. All required operators must be `Succeeded` before proceeding.
 
 **Known gotchas:**
+- **RHCL upgraded to 1.4.x despite pin:** `startingCSV` does not block channel upgrades. An approved InstallPlan for `rhcl-operator.v1.4.x` replaces 1.3.6. Downgrade: [RHCL version pin](../reference/rhcl-version-pin.md).
 - **Connectivity Link install location:** The RHCL operator subscription is in `openshift-operators` (all-namespaces mode), NOT in `kuadrant-system`. The `kuadrant-system` namespace is created by the `Kuadrant` CR (`gitops/instance/maas/connectivity-link`) — it does not exist before that CR is applied.
 - Apply connectivity-link first — Authorino must be running before RHOAI configures authentication.
 - After the RHCL operator is ready, create the Kuadrant CR: `helm template gitops/instance/maas/connectivity-link --name-template maas-connectivity-link | oc apply -f -`. Without this CR, Authorino and Limitador pods are not deployed and MaaS auth/rate-limiting is silently unenforced.

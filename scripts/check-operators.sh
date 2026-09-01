@@ -12,7 +12,18 @@ oc get csv -n openshift-operators | grep -q "servicemesh" && echo "OK" || echo "
 
 # Check Connectivity Link (RHOAI 3.0+)
 echo -n "Connectivity Link: "
-oc get csv -n openshift-operators | grep -q "rhcl-operator" && echo "OK" || echo "NOT FOUND (required for RHOAI 3.0+)"
+if ! oc get csv -n openshift-operators 2>/dev/null | grep -q "rhcl-operator"; then
+  echo "NOT FOUND (required for RHOAI 3.0+)"
+else
+  rhcl_ver=$(oc get csv -n openshift-operators -o jsonpath='{.items[?(@.spec.displayName=="Red Hat Connectivity Link")].spec.version}' 2>/dev/null)
+  if [[ "$rhcl_ver" =~ ^1\.3\. ]]; then
+    echo "OK (${rhcl_ver})"
+  elif [[ -n "$rhcl_ver" ]]; then
+    echo "WARN: ${rhcl_ver} installed (pin is 1.3.x — see docs/reference/rhcl-version-pin.md)"
+  else
+    echo "OK"
+  fi
+fi
 
 # Check OpenShift AI
 echo -n "OpenShift AI: "
