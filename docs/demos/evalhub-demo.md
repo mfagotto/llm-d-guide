@@ -2,6 +2,8 @@
 
 > **Goal:** Use EvalHub + **GuideLLM** to compare **baseline** vs **llm-d optimized** inference for `qwen3-8b` on MaaS. EvalHub server + PostgreSQL run in the RHOAI platform namespace (`redhat-ods-applications`); evaluation workloads run in a labeled tenant namespace (`evalhub-demo`).
 >
+> **Prerequisites:** [Phase 7 (RHOAI 3.5 upgrade)](../phases/07-rhoai-upgrade.md) complete — EvalHub features and MLflow URI format require RHOAI **3.5.x** with RHCL still on **1.3.x**. [Phase 6 (MaaS)](../phases/06-maas.md) with `qwen3-8b` `Ready` via MaaS.
+>
 > **Scope in this document:** **Level 1 only** (performance engineering).  
 > After this is validated together, proceed with:
 >

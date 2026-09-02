@@ -336,4 +336,6 @@ curl -sk -X POST "https://${MAAS_GW}/maas-api/v1/api-keys" \
 
 For more MaaS troubleshooting, see: [MaaS Troubleshooting Reference](../reference/maas-troubleshooting.md)
 
-**End of Phase 6:** Stop here and report the MaaS smoke test results to the user. Show the API key creation response (must be HTTP 201 with a `sk-oai-*` key) and the model call response (must be HTTP 200). Installation is complete.
+**End of Phase 6:** Stop here and report the MaaS smoke test results to the user. Show the API key creation response (must be HTTP 201 with a `sk-oai-*` key) and the model call response (must be HTTP 200).
+
+Wait for confirmation before proceeding to [Phase 7 — RHOAI 3.5 Upgrade](07-rhoai-upgrade.md) (required before EvalHub demos).

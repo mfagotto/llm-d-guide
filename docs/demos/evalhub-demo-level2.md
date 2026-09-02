@@ -4,7 +4,7 @@
 >
 > **Audience:** You are presenting to engineers or stakeholders who already saw [Level 1](evalhub-demo.md) (GuideLLM baseline vs optimized). They should leave understanding *why* CI gates and OCI artifacts matter—not just which commands to paste.
 >
-> **Prerequisites:** [Level 1](evalhub-demo.md) complete — EvalHub server in `${EVALHUB_NS}` (`redhat-ods-applications`), tenant namespace `${EVALHUB_TENANT_NS}` (`evalhub-demo`) with the EvalHub tenant label and callback NetworkPolicy (Level 1 §2.1–2.1b), CLI pointed at `evalhub config set tenant ${EVALHUB_TENANT_NS}`, `evalhub-model-auth` with a valid MaaS API key, and at least one successful Level 1 GuideLLM run. If you ran Level 1 **§6.2 full cleanup**, reinstall EvalHub (Level 1 §2) and recreate the tenant before starting Level 2.
+> **Prerequisites:** [Phase 7 (RHOAI 3.5 upgrade)](../phases/07-rhoai-upgrade.md) complete. [Level 1](evalhub-demo.md) complete — EvalHub server in `${EVALHUB_NS}` (`redhat-ods-applications`), tenant namespace `${EVALHUB_TENANT_NS}` (`evalhub-demo`) with the EvalHub tenant label and callback NetworkPolicy (Level 1 §2.1–2.1b), CLI pointed at `evalhub config set tenant ${EVALHUB_TENANT_NS}`, `evalhub-model-auth` with a valid MaaS API key, and at least one successful Level 1 GuideLLM run. If you ran Level 1 **§6.2 full cleanup**, reinstall EvalHub (Level 1 §2) and recreate the tenant before starting Level 2.
 >
 > **Duration:** ~45–60 minutes live (setup once, demo run ~10–15 min with Garak `quick`).
 

@@ -22,5 +22,7 @@ Human gate:
   - API key creation returns sk-oai-* key
   - MaaS dashboard accessible
 
+Next: Phase 7 (RHOAI 3.5 upgrade) before EvalHub demos
+
 Guide: docs/phases/06-maas.md
 ══════════════════════════════════════════════════════════════

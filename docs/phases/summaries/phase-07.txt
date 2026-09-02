@@ -1,0 +1,30 @@
+══════════════════════════════════════════════════════════════
+  Phase 7 — RHOAI 3.5 Upgrade (RHCL pinned)
+══════════════════════════════════════════════════════════════
+
+Goal:     Upgrade OpenShift AI operator 3.4.0 → 3.5.x while
+          keeping RHCL on 1.3.x (required for MaaS auth).
+Time:     ~15–20 min
+
+Prerequisites:
+  - Phases 0–6 complete on rhods-operator.3.4.0
+  - default-dsc Ready; MaaS smoke test passed (recommended)
+  - RHCL still rhcl-operator.v1.3.6 (or other 1.3.x)
+
+Steps:
+  1. Pre-flight: CSV versions, packagemanifest target CSV
+  2. Patch RHOAI subscription → rhods-operator.3.5.x
+  3. Approve ONLY the RHOAI InstallPlan (redhat-ods-operator)
+  4. Reject RHCL 1.4.x InstallPlans (approve-rhcl-installplan.sh)
+  5. Wait for operator CSV + DSC reconcile
+  6. Post-upgrade: MaaS smoke test, MLflow /mlflow URI
+  7. Optional: enable TrustyAI for EvalHub demos
+
+Human gate:
+  - rhods-operator.3.5.x CSV Succeeded
+  - default-dsc Ready
+  - RHCL still 1.3.x (check-operators.sh OK)
+  - MaaS API key + model call still HTTP 201/200
+
+Guide: docs/phases/07-rhoai-upgrade.md
+══════════════════════════════════════════════════════════════
