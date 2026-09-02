@@ -6,9 +6,13 @@
 #
 # --- Combination reference (pin or override with channel + startingCSV) ---
 #
-# GA stable 3.3.x (default):
+# GA stable 3.4.x (default — upgrade to 3.5.x in Phase 7):
 #   channel: stable-3.x
-#   startingCSV: rhods-operator.3.3.2
+#   startingCSV: rhods-operator.3.4.0
+#
+# GA stable 3.5.x (after Phase 7 upgrade — optional pin for greenfield):
+#   channel: stable-3.x
+#   startingCSV: rhods-operator.3.5.0
 #
 # 3.4 early access (beta channel):
 #   channel: beta

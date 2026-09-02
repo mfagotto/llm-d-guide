@@ -31,10 +31,10 @@ connectivity-link operator  →  Kuadrant CR (observability enabled, Ready defer
 
 ### Step 1 — Connectivity Link (RHCL operator — Authorino + Limitador + Kuadrant CRDs)
 
-> **RHCL version pinning (RHOAI 3.4):** The RHCL operator subscription in
+> **RHCL version pinning (RHOAI 3.4 / 3.5):** The RHCL operator subscription in
 > `gitops/operators/connectivity-link` pins to **v1.3.x**. RHCL v1.4.0 has a known Wasm shim bug
 > that breaks Authorino auth calls on MaaS gateways (HTTP 500 `AUTH_FAILURE`). **Do not upgrade
-> to v1.4.0.** This pin should be revisited once RHOAI 3.5 is GA.
+> to v1.4.0** — keep the pin through [Phase 7](07-rhoai-upgrade.md) when upgrading RHOAI to 3.5.x.
 
 ```bash
 oc apply -k ./gitops/operators/connectivity-link

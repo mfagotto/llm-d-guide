@@ -170,4 +170,5 @@ Whenever OLM creates a pending InstallPlan:
 
 - Subscription pin: `gitops/operators/connectivity-link/operator.yaml`
 - Phase 3 install: [docs/phases/03-operators-rhoai.md](../phases/03-operators-rhoai.md)
+- Phase 7 RHOAI upgrade (keep RHCL pinned): [docs/phases/07-rhoai-upgrade.md](../phases/07-rhoai-upgrade.md)
 - MaaS auth: [maas-troubleshooting.md](maas-troubleshooting.md)

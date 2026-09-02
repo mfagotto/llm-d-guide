@@ -21,13 +21,15 @@
 10. [MaaS Demo (Optional)](docs/demos/maas-demo.md)
 11. [External Model MaaS Demo (Optional)](docs/demos/external-model-demo.md)
 12. [Full MaaS Reset](docs/demos/maas-reset.md)
-13. [AI-Assisted Installation](#ai-assisted-installation)
-14. [Appendix A — Quick-Reference Commands](#appendix-a--quick-reference-commands)
-15. [Appendix B — Troubleshooting](#appendix-b--troubleshooting)
-16. [Appendix C — Reference Links](#appendix-c--reference-links)
-17. [Appendix D — MaaS with Self-Signed TLS Certificates](#appendix-d--maas-with-self-signed-tls-certificates)
-18. [Appendix E — Token Rate Limiting](#appendix-e--token-rate-limiting-behaviour-and-observability)
-19. [Appendix F — ArgoCD (Red Hat OpenShift GitOps)](#appendix-f--argocd-red-hat-openshift-gitops)
+13. [EvalHub Demo — Level 1 (Optional)](docs/demos/evalhub-demo.md)
+14. [EvalHub Demo — Level 2 (Optional)](docs/demos/evalhub-demo-level2.md)
+15. [AI-Assisted Installation](#ai-assisted-installation)
+16. [Appendix A — Quick-Reference Commands](#appendix-a--quick-reference-commands)
+17. [Appendix B — Troubleshooting](#appendix-b--troubleshooting)
+18. [Appendix C — Reference Links](#appendix-c--reference-links)
+19. [Appendix D — MaaS with Self-Signed TLS Certificates](#appendix-d--maas-with-self-signed-tls-certificates)
+20. [Appendix E — Token Rate Limiting](#appendix-e--token-rate-limiting-behaviour-and-observability)
+21. [Appendix F — ArgoCD (Red Hat OpenShift GitOps)](#appendix-f--argocd-red-hat-openshift-gitops)
 
 ---
 
@@ -106,6 +108,9 @@ This repository includes an [`AGENTS.md`](AGENTS.md) file that gives Claude Code
 | 4 | Monitoring stack — COO, User Workload Monitoring, Perses dashboards | 10 min |
 | 5 | llm-d Quick Start — Gateway, namespace, LLMInferenceService, curl smoke test | 15–20 min |
 | 6 | MaaS — Gateway, Authorino TLS, subscriptions, API key smoke test | 10–15 min |
+| 7 | RHOAI 3.5 upgrade (RHCL pinned) — required before EvalHub demos | 15–20 min |
+
+**Optional demos** (after Phases 6–7): [MaaS demo](docs/demos/maas-demo.md) → [EvalHub Level 1](docs/demos/evalhub-demo.md) → [EvalHub Level 2](docs/demos/evalhub-demo-level2.md).
 
 ### Resuming after an error
 
@@ -712,6 +717,18 @@ Wipe all demo state from Sections 10 and 11 and start from a clean slate. See: *
 
 ---
 
+## 13. EvalHub Demo — Level 1 (Optional)
+
+GuideLLM performance comparison (baseline vs llm-d optimized) for `qwen3-8b` on MaaS, with results in MLflow. Requires [Phase 7 — RHOAI 3.5 upgrade](docs/phases/07-rhoai-upgrade.md) and a working MaaS endpoint. See the full walkthrough: **[docs/demos/evalhub-demo.md](docs/demos/evalhub-demo.md)**
+
+---
+
+## 14. EvalHub Demo — Level 2 (Optional)
+
+CI/CD quality gate (Garak + lm-eval) and OCI immutable evaluation artifacts (Quay export). Requires Level 1 complete. See the full walkthrough: **[docs/demos/evalhub-demo-level2.md](docs/demos/evalhub-demo-level2.md)**
+
+---
+
 ## AI-Assisted Installation
 
 For guided installation using Claude Code, Cursor, or compatible AI coding assistants,
@@ -727,11 +744,14 @@ with wait conditions and human gates:
 | 4 — Monitoring | [docs/phases/04-monitoring.md](docs/phases/04-monitoring.md) | 10 min |
 | 5 — llm-d Quick Start | [docs/phases/05-llmd-quickstart.md](docs/phases/05-llmd-quickstart.md) | 15–20 min |
 | 6 — MaaS | [docs/phases/06-maas.md](docs/phases/06-maas.md) | 10–15 min |
+| 7 — RHOAI 3.5 upgrade | [docs/phases/07-rhoai-upgrade.md](docs/phases/07-rhoai-upgrade.md) | 15–20 min |
 
 Reference material:
 - [Validation Commands](docs/reference/validation.md)
 - [MaaS Troubleshooting](docs/reference/maas-troubleshooting.md)
 - [ExternalModel Guide](docs/reference/external-models.md)
+- [EvalHub Demo — Level 1](docs/demos/evalhub-demo.md)
+- [EvalHub Demo — Level 2](docs/demos/evalhub-demo-level2.md)
 
 ---
 

@@ -2,7 +2,7 @@
 
 This file gives assistants (Claude Code, OpenCode, Cursor, and compatible tools) persistent
 context for installing **Red Hat OpenShift AI 3.4** (self-managed) with **llm-d** on
-**OpenShift Container Platform 4.19+** (llm-d requires 4.20+; tested on 4.21). The canonical, step-by-step manual is [`README.md`](README.md);
+**OpenShift Container Platform 4.19+** (llm-d requires 4.20+; tested on 4.21). Phase 3 installs RHOAI **3.4.0**; [Phase 7](docs/phases/07-rhoai-upgrade.md) upgrades to **3.5.x** (RHCL stays on 1.3.x). The canonical, step-by-step manual is [`README.md`](README.md);
 use this runbook for phased execution, wait conditions, and human gates. Work through one phase
 per session. Always tell the assistant which phase you are on and paste any relevant error output
 before asking for help.
@@ -16,7 +16,7 @@ troubleshooting) is in [`docs/reference/`](docs/reference/).
 - **Explain before executing.** Before each major step (operator installs, chart applies, config changes), briefly explain what it does and why. Wait for the user to confirm before running it.
 - **Never skip optional steps without asking.** If a step is marked optional, ask the user whether to include or skip it.
 - **Ask questions directly.** The user is an experienced operator — don't enumerate options with descriptions or explanations. Just ask plainly (e.g., "What cloud provider — `aws` or `none`?"), don't present numbered lists explaining what each choice means.
-- **Optional tools go at the end.** ArgoCD (OpenShift GitOps) is the only optional add-on. Don't ask about it during any phase — offer it once after Phase 6 completes: "Do you want to install any additional tools, like ArgoCD?"
+- **Optional tools go at the end.** ArgoCD (OpenShift GitOps) is the only optional add-on. Don't ask about it during any phase — offer it once after Phase 7 completes: "Do you want to install any additional tools, like ArgoCD?"
 
 ---
 
@@ -82,6 +82,7 @@ them from example defaults. Do not commit `cluster.env` (it may contain `HF_TOKE
 | 4 | Monitoring stack | [docs/phases/04-monitoring.md](docs/phases/04-monitoring.md) | 10 min | Optional sign-off |
 | 5 | llm-d Quick Start | [docs/phases/05-llmd-quickstart.md](docs/phases/05-llmd-quickstart.md) | 15–20 min | Review curl test output |
 | 6 | MaaS | [docs/phases/06-maas.md](docs/phases/06-maas.md) | 10–15 min | Verify `LLMInferenceService` `Ready: True` via MaaS route |
+| 7 | RHOAI 3.5 upgrade | [docs/phases/07-rhoai-upgrade.md](docs/phases/07-rhoai-upgrade.md) | 15–20 min | `rhods-operator.3.5.x` Succeeded; RHCL still 1.3.x; MaaS smoke test OK |
 
 ---
 
@@ -114,7 +115,7 @@ Install Connectivity Link, LeaderWorkerSet, **monitoring operators (Tempo, OpenT
 - Do NOT install Kueue unless explicitly required. 
 - `modelsAsService` must be `false` during this phase. 
 - Apply connectivity-link first — Authorino must be running before RHOAI.
-**RHCL version pinning:** Pin RHCL to v1.3.x — v1.4.0 has a Wasm shim bug that breaks MaaS auth. Use `./scripts/approve-rhcl-installplan.sh` (never bulk-approve openshift-operators InstallPlans). Downgrade: [docs/reference/rhcl-version-pin.md](docs/reference/rhcl-version-pin.md). Revisit when RHOAI 3.5 is GA.
+**RHCL version pinning:** Pin RHCL to v1.3.x — v1.4.0 has a Wasm shim bug that breaks MaaS auth. Use `./scripts/approve-rhcl-installplan.sh` (never bulk-approve openshift-operators InstallPlans). **Keep the pin through [Phase 7](docs/phases/07-rhoai-upgrade.md)** when upgrading RHOAI to 3.5.x. Downgrade: [docs/reference/rhcl-version-pin.md](docs/reference/rhcl-version-pin.md).
 **Kuadrant `Ready: False` after creating the CR** — this is **expected** at this phase. The operator requires a `GatewayClass` to report `Ready: True`, but the GatewayClass is created in Phase 5. Verify Authorino and Limitador pods are running in `kuadrant-system` — that confirms the operator is functional. Kuadrant becomes `Ready` in Phase 5 after the gateway is deployed and the operator pod is restarted. Do not search the marketplace or install any gateway operator.
 **Full guide:** [docs/phases/03-operators-rhoai.md](docs/phases/03-operators-rhoai.md)
 
@@ -140,6 +141,15 @@ Deploy the MaaS gateway, configure Authorino TLS, bootstrap the subscription sta
 **Critical:** Order matters: gateway → database → enable `modelsAsService=true` → Authorino TLS. Without Authorino TLS, the API key endpoint returns 500.
 **Authorino TLS race condition:** The `odh-model-controller`'s `gateway-auth-bootstrap` controller does a one-shot check when it sees the gateway annotation — if Authorino TLS is not fully active at that moment, it skips EnvoyFilter creation and never retries. Steps 4a–4c must be verified before applying 4d. If the EnvoyFilter is missing after 4d, restart `odh-model-controller`.
 **Full guide:** [docs/phases/06-maas.md](docs/phases/06-maas.md)
+
+### Phase 7 — RHOAI 3.5 Upgrade (RHCL pinned)
+Upgrade OpenShift AI from 3.4.0 (Phase 3) to 3.5.x after MaaS is validated. Required before EvalHub demos and other 3.5-only features.
+**Critical:**
+- Approve **only** the `rhods-operator.3.5.x` InstallPlan in `redhat-ods-operator`.
+- **Reject RHCL 1.4.x** InstallPlans — use `./scripts/approve-rhcl-installplan.sh` (never bulk-approve `openshift-operators`).
+- Re-run MaaS smoke test after upgrade; re-run Phase 6 Step 4 if API keys return 500.
+- RHOAI 3.5 MLflow URIs must include `/mlflow` (EvalHub, notebooks).
+**Full guide:** [docs/phases/07-rhoai-upgrade.md](docs/phases/07-rhoai-upgrade.md)
 
 ---
 
