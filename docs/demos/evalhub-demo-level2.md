@@ -12,6 +12,8 @@ This demo draws on [Part 6: CI/CD pipeline integration](https://developers.redha
 
 ---
 
+
+
 ## What Level 1 did vs what Level 2 adds
 
 In Level 1 you answered: *"What did llm-d intelligent routing, prefix caching, and scale-out buy us on throughput and latency?"* — using **GuideLLM** to compare baseline vs optimized stacks.
@@ -31,6 +33,8 @@ Level 2 answers two harder questions:
 
 ---
 
+
+
 ## Demo story (three acts)
 
 Each act maps to a section below.
@@ -46,6 +50,8 @@ Each act maps to a section below.
 **Suggested live flow:** Acts 1–2 in the terminal, Act 3 in results JSON + [Quay.io](https://quay.io) repository tags if you have a screen share.
 
 ---
+
+
 
 ## Architecture — where the new pieces sit
 
@@ -90,6 +96,8 @@ flowchart LR
 They are complementary ([Part 7](https://developers.redhat.com/articles/2026/06/16/store-immutable-ai-evaluation-records-evalhub-oci)).
 
 ---
+
+
 
 ## 0) Demo variables
 
@@ -148,6 +156,8 @@ evalhub config get tenant
 
 ---
 
+
+
 ## 1) Prerequisites check
 
 Run this before the audience arrives. It is your **GO/NO-GO** gate.
@@ -201,7 +211,11 @@ oc get sa "${EVALHUB_JOB_SA}" -n "${EVALHUB_TENANT_NS}" >/dev/null \
 
 ---
 
+
+
 ## 2) Prepare OCI export (Act 3 — setup)
+
+
 
 ### Why this section exists
 
@@ -253,6 +267,8 @@ quay.io/<organization>/eval-results:evalhub-<tag>@sha256:<digest>
 - **Tag** — human-friendly name (EvalHub generates `evalhub-<hash>` from job ID, provider, and benchmark).
 - **Digest** — the cryptographic fingerprint auditors care about.
 
+
+
 ### 2.2 Let the job pod read the registry Secret
 
 The evaluation job runs as `${EVALHUB_JOB_SA}` in `${EVALHUB_TENANT_NS}`. EvalHub mounts the Secret named in `exports.oci.k8s.connection` into the job pod for the OCI sidecar.
@@ -292,6 +308,8 @@ oc auth can-i get secret/${OCI_CONNECTION_SECRET} -n "${EVALHUB_TENANT_NS}" \
 # Expected: yes
 ```
 
+
+
 ### 2.3 Let the API client reference `exports.oci` at job submit
 
 EvalHub checks the **CLI caller** (`${EVALHUB_CLIENT_SA}`) can `get` the Secret named in `exports.oci.k8s.connection` **before** scheduling the job — same pattern as `evalhub-model-auth` in Level 1 §3. Add a scoped rule to the existing `evalhub-evaluator` Role:
@@ -322,7 +340,11 @@ evalhub config set token "${TOKEN}"
 
 ---
 
+
+
 ## 3) Create the gate collection (Act 1 — live demo)
+
+
 
 ### What is a "gate collection"?
 
@@ -405,6 +427,8 @@ export GATE_COLLECTION_ID=$(awk '/^Collection created:/ {print $3}' /tmp/evalhub
 echo "GATE_COLLECTION_ID=${GATE_COLLECTION_ID}"
 ```
 
+
+
 ### Option B — Accuracy gate (lm-eval IFEval, capped)
 
 Optional accuracy-focused gate. **Not part of Level 1** — use only if you have time (~10–15 min with a cap).
@@ -457,6 +481,8 @@ evalhub collections describe "${GATE_COLLECTION_ID}"
 ```
 
 ---
+
+
 
 ## 4) Build the job spec — `eval-gate.yaml` (setup)
 
@@ -532,7 +558,11 @@ exports:
 
 ---
 
+
+
 ## 5) Run the gate (Act 2 + 3 — live demo)
+
+
 
 ### Step 5.1 — Submit and block until done (the CI gate)
 
@@ -560,12 +590,16 @@ echo "JOB_ID=${JOB_ID}"
 | `2`  | Timeout                                     | Increase `--timeout` or use Garak `quick`          |
 
 
+
+
 ### Step 5.2 — Read results (human + machine)
 
 ```bash
 evalhub eval results "${JOB_ID}" --format table
 evalhub eval results "${JOB_ID}" --format json | tee /tmp/evalhub-gate-results.json
 ```
+
+
 
 ### Step 5.3 — Capture the OCI receipt (Act 3 )
 
@@ -595,12 +629,14 @@ maas-url: ${MAAS_MODEL_URL}
 EOF
 ```
 
-Optional: verify the new tag in [Quay.io](https://quay.io) → **Repositories → `<quay-org>/eval-results`**, or with `skopeo` (product doc verification):
+Optional: verify the new tag in [Quay.io](https://quay.io) → **Repositories →** `<quay-org>/eval-results`, or with `skopeo` (product doc verification):
 
 ```bash
 skopeo inspect --creds "${QUAY_ROBOT_USER}:${QUAY_ROBOT_TOKEN}" \
   "docker://${ARTIFACT_REF%%@*}"
 ```
+
+
 
 ### Optional — reusable gate script
 
@@ -624,6 +660,8 @@ chmod +x /tmp/evalhub-gate.sh
 ```
 
 ---
+
+
 
 ## 6) Prove immutability (optional deep dive)
 
@@ -650,12 +688,14 @@ export ARTIFACT_REF=$(jq -r '
 echo "ARTIFACT_REF=${ARTIFACT_REF}"
 ```
 
+
+
 ### Step 2 — Verify the digest still matches (30-second proof)
 
 Install [ORAS](https://oras.land/). Log in to Quay once (prefer stdin over `--password` on the CLI):
 
 ```bash
-echo "${QUAY_ROBOT_TOKEN}" | oras registry login quay.io \
+echo "${QUAY_ROBOT_TOKEN}" | oras  login quay.io \
   -u "${QUAY_ROBOT_USER}" --password-stdin
 
 oras manifest fetch "${ARTIFACT_REF}" | jq -r '.config.digest, .layers[].digest'
@@ -663,7 +703,9 @@ oras manifest fetch "${ARTIFACT_REF}" | jq -r '.config.digest, .layers[].digest'
 
 **Tell the audience:** "The manifest digest in Quay must match the `sha256:` in our audit record. That is the cryptographic receipt — no database trust required."
 
-> **Presenter note — `oras pull` looks successful but creates no files:** EvalHub layers do not set `org.opencontainers.image.title`, so `oras pull` downloads the manifest then prints `Skipped pulling layers without file name…` and leaves the output directory empty. That is **expected**, not a failure. Use `oras cp --to-oci-layout` below to retrieve the full artifact.
+> **Presenter note —** `oras pull` **looks successful but creates no files:** EvalHub layers do not set `org.opencontainers.image.title`, so `oras pull` downloads the manifest then prints `Skipped pulling layers without file name…` and leaves the output directory empty. That is **expected**, not a failure. Use `oras cp --to-oci-layout` below to retrieve the full artifact.
+
+
 
 ### Step 3 — Download the full artifact (ORAS copy + unpack)
 
@@ -701,6 +743,8 @@ ls -lh /tmp/evalhub-unpacked/layer-*/scan.report.html
 If the pulled files were tampered with after push, their hash would not match the `sha256:` in `ARTIFACT_REF` ([Part 7](https://developers.redhat.com/articles/2026/06/16/store-immutable-ai-evaluation-records-evalhub-oci)).
 
 ---
+
+
 
 ## 7) Connect to real CI/CD (reference — not live demo)
 
@@ -740,6 +784,8 @@ In production you do not paste tokens into `evalhub config`. Set environment var
 
 ---
 
+
+
 ## 8) Demo validation checklist
 
 Before you call Level 2 "done":
@@ -757,7 +803,11 @@ Before you call Level 2 "done":
 
 ---
 
+
+
 ## 9) Troubleshooting
+
+
 
 ### Job stuck pending / status callback timeout
 
@@ -778,6 +828,8 @@ oc logs "${POD}" -n "${EVALHUB_TENANT_NS}" -c sidecar | rg -i 'oci|x509|blobs/up
 1. Re-verify Section 2.2 RBAC for the job SA (`oc auth can-i get secret/...` → `yes`).
 2. Re-verify Section 2.3 — API client can `get` `${OCI_CONNECTION_SECRET}`; mint a fresh token if you patched RBAC after §0.
 
+
+
 ### `500` — not permitted to access secret `oci-registry-credentials`
 
 EvalHub validates the **API client** (`${EVALHUB_CLIENT_SA}`) at job submit time, not only the job pod SA. Run Section **2.3** (patch `evalhub-evaluator`, verify `auth can-i`, `evalhub config set token`), then re-submit Step 5.1.
@@ -789,71 +841,15 @@ EvalHub validates the **API client** (`${EVALHUB_CLIENT_SA}`) at job submit time
 3. Verify the secret auth key: `oc get secret oci-registry-credentials -n evalhub-demo -o jsonpath='{.data.\.dockerconfigjson}' | base64 -d | jq '.auths | keys'` → must include `"quay.io"` (not `quay.io/<quay-org>`).
 4. Sidecar logs showing `HEAD ... quay.io/v2/... status:401` with eval otherwise succeeding usually means (3).
 
+
+
 ### Alternative: internal OpenShift image registry
 
 If you prefer the cluster registry instead of Quay, set `OCI_HOST=image-registry.openshift-image-registry.svc:5000`, create an ImageStream, grant `system:image-builder` to the job SA, and use an SA-token-based `docker-registry` Secret. RHOAI 3.5 may also require a per-job `sidecar_config.json` CA patch — see below.
 
 EvalHub job pods proxy OCI pushes through the **sidecar** to `image-registry.openshift-image-registry.svc:5000` over HTTPS signed by the cluster **service CA**. RHOAI 3.5 does not yet inject `sidecar.oci.ca_cert_path` into job `sidecar_config.json` (unlike `eval_hub` / `mlflow`). Patch the job ConfigMap before the sidecar reads it, or recycle the pod after patching.
 
-EvalHub sets `backoffLimit: 0` on evaluation Jobs — deleting a pod after a failure leaves the Job permanently `Failed`. Raise `backoffLimit` first so the Job can spawn a replacement pod with the patched config.
-
-**Workflow** (run in a second terminal while Step 5.1 is waiting, or after a failed OCI push before the Job finishes):
-
-```bash
-export EVALHUB_TENANT_NS=evalhub-demo
-export JOB_ID=$(jq -r '.[0].resource.id // .[0].id' /tmp/evalhub-gate-submit.json)
-
-# 1) Find the Kubernetes Job (EvalHub job_id label — not the K8s Job name)
-export K8S_JOB=$(oc get job -n "${EVALHUB_TENANT_NS}" \
-  -l "job_id=${JOB_ID}" \
-  -o jsonpath='{.items[0].metadata.name}')
-echo "K8S_JOB=${K8S_JOB}"
-
-# 2) Read the ConfigMap name from the job-spec volume (do NOT guess JOB_ID-spec)
-export JOB_SPEC_CM=$(oc get job "${K8S_JOB}" -n "${EVALHUB_TENANT_NS}" \
-  -o jsonpath='{.spec.template.spec.volumes[?(@.name=="job-spec")].configMap.name}')
-echo "JOB_SPEC_CM=${JOB_SPEC_CM}"
-
-# 3) Allow one pod retry after recycle (default is 0)
-oc patch job "${K8S_JOB}" -n "${EVALHUB_TENANT_NS}" --type=merge \
-  -p '{"spec":{"backoffLimit":2}}'
-
-# 4) Patch sidecar_config.json with OCI registry CA
-oc get configmap "${JOB_SPEC_CM}" -n "${EVALHUB_TENANT_NS}" -o json | python3 -c "
-import json, sys
-doc = json.load(sys.stdin)
-sc = json.loads(doc['data']['sidecar_config.json'])
-sc['oci'] = {'ca_cert_path': '/etc/pki/ca-trust/source/anchors/service-ca.crt'}
-doc['data']['sidecar_config.json'] = json.dumps(sc, indent=4) + '\n'
-print(json.dumps(doc))
-" | oc apply -f -
-
-# 5) Verify ConfigMap
-oc get configmap "${JOB_SPEC_CM}" -n "${EVALHUB_TENANT_NS}" \
-  -o jsonpath='{.data.sidecar_config\.json}' | jq .oci
-
-# 6) Delete the pod so the Job recreates it (sidecar_config.json is a subPath — fixed at pod start)
-oc delete pod -n "${EVALHUB_TENANT_NS}" -l "job-name=${K8S_JOB}" --ignore-not-found
-```
-
-**Verify inside the new sidecar** (while the replacement pod is `Running`):
-
-```bash
-export POD=$(oc get pods -n "${EVALHUB_TENANT_NS}" -l "job-name=${K8S_JOB}" \
-  -o jsonpath='{.items[0].metadata.name}')
-
-# Mounted config (adapter does not have this file — use -c sidecar)
-oc exec -n "${EVALHUB_TENANT_NS}" "${POD}" -c sidecar -- \
-  cat /meta/sidecar_config.json | jq .oci
-
-# Startup logs: expect "Loaded CA certificate" with label OCI
-oc logs -n "${EVALHUB_TENANT_NS}" "${POD}" -c sidecar | \
-  rg 'Loaded CA certificate|OCI registry proxy|x509'
-```
-
-> **Note:** Patching `evalhub-config` on the server is overwritten by the TrustyAI operator on reconcile. Per-job ConfigMap patching (above) is the reliable lab workaround until RHOAI adds `sidecar.oci.ca_cert_path` to the operator-generated server config.
-
-### Gate failed but score "looks fine"
+Gate failed but score "looks fine"
 
 Collection-level and benchmark-level thresholds both apply:
 
@@ -862,15 +858,15 @@ evalhub eval status "${JOB_ID}" --format json | jq '.[0].status // .status'
 evalhub eval results "${JOB_ID}" --format json | jq '.[0].metrics'
 ```
 
+
+
 ### MaaS `429 Too Many Requests`
 
 See [Level 1 troubleshooting](evalhub-demo.md) — raise token rate limits before lm-eval gates (especially Option A2 / Option B).
 
-### MLflow UI empty after a GuideLLM run (Level 1)
-
-Expected for GuideLLM — not applicable to Level 2 Garak/lm-eval gates, which **do** write MLflow runs. Filter by workspace `${EVALHUB_TENANT_NS}` in the dashboard.
-
 ---
+
+
 
 ## 10) Cleanup
 
@@ -882,12 +878,24 @@ oc delete secret "${OCI_CONNECTION_SECRET}" -n "${EVALHUB_TENANT_NS}" --ignore-n
 oc delete role evalhub-oci-push-reader -n "${EVALHUB_TENANT_NS}" --ignore-not-found=true
 oc delete rolebinding evalhub-job-oci-push-reader -n "${EVALHUB_TENANT_NS}" --ignore-not-found=true
 
+# hard delete all the eval jobs
+evalhub eval status --format json --limit 1000 \
+  | jq -r '.[].id' \
+  | while read -r id; do
+      evalhub eval cancel "$id" --hard-delete --yes
+    done
+
+
 rm -f /tmp/evalhub-gate-collection.yaml /tmp/evalhub-gate-collection-create.json \
       /tmp/eval-gate.yaml /tmp/evalhub-gate-submit.json \
       /tmp/evalhub-gate-results.json /tmp/evalhub-gate-audit-record.txt
 ```
 
+
+
 ---
+
+
 
 ## 11) What to do next
 
@@ -895,12 +903,18 @@ rm -f /tmp/evalhub-gate-collection.yaml /tmp/evalhub-gate-collection-create.json
 
 ---
 
+
+
 ## References
+
+
 
 ### Primary product docs
 
 - [Red Hat OpenShift AI Self-Managed 3.4: Evaluating AI systems (PDF)](https://docs.redhat.com/en/documentation/red_hat_openshift_ai_self-managed/3.4/pdf/evaluating_ai_systems/Red_Hat_OpenShift_AI_Self-Managed-3.4-Evaluating_AI_systems-en-US.pdf)
 - [Red Hat OpenShift AI Self-Managed 3.5: Evaluating AI systems — OCI export (§2.19)](https://docs.redhat.com/en/documentation/red_hat_openshift_ai_self-managed/3.5/html-single/evaluating_ai_systems/index#evalhub-export-evaluation-results-to-oci-registry_evaluate)
+
+
 
 ### EvalHub blog series
 
@@ -913,6 +927,8 @@ rm -f /tmp/evalhub-gate-collection.yaml /tmp/evalhub-gate-collection-create.json
 - [Part 7: Store immutable AI evaluation records with EvalHub and OCI](https://developers.redhat.com/articles/2026/06/16/store-immutable-ai-evaluation-records-evalhub-oci) — **Level 2 primary**
 - [Part 8: Manage LLM evaluation workloads at scale with EvalHub and Kueue](https://developers.redhat.com/articles/2026/06/18/manage-llm-evaluation-workloads-scale-evalhub-and-kueue)
 - [Part 9: Connect EvalHub to protected production model servers](https://developers.redhat.com/articles/2026/06/23/connect-evalhub-protected-production-model-servers)
+
+
 
 ### Related demo docs
 

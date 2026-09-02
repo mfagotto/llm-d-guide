@@ -34,6 +34,7 @@ oc delete group freemium-users pro-users premium-users 2>/dev/null || true
 # 7. (Optional) delete demo users — uncomment if you also want to remove the OCP user objects
 # oc delete user alice bob charlie 2>/dev/null || true
 # oc delete identity --all 2>/dev/null || true
+
 ```
 
 Verify clean state:
