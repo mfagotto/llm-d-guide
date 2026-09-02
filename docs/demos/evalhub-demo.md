@@ -20,9 +20,11 @@ This demo is intentionally practical: you patch the inference stack twice, run t
 
 ## Figure 1 — EvalHub architecture
 
-Figure 1 illustrates the EvalHub architecture referenced in the upstream article.
+Figure 1 illustrates the EvalHub architecture from [Part 1](https://developers.redhat.com/articles/2026/05/12/how-evalhub-manages-two-layer-kubernetes-control-planes) of the upstream article series.
 
-Figure 1: The EvalHub service orchestrates evaluation jobs by managing data in PostgreSQL and tracking experiment runs in MLflow.
+![Figure 1: EvalHub architecture](assets/evalhub-figure-1.png)
+
+*Figure 1: The EvalHub service orchestrates evaluation jobs by managing data in PostgreSQL and tracking experiment runs in MLflow.*
 
 ---
 
