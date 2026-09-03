@@ -20,10 +20,12 @@ spec:
       managementState: Managed
     feastoperator:
       managementState: {{ if (.Values.featureStore | default false) }}Managed{{ else }}Removed{{ end }}
+    aigateway:
+      managementState: {{ if (.Values.modelsAsService | default false) }}Managed{{ else }}Removed{{ end }}
+      modelsAsAService:
+        managementState: {{ if (.Values.modelsAsService | default false) }}Managed{{ else }}Removed{{ end }}
     kserve:
       managementState: Managed
-      modelsAsService:
-        managementState: {{ if (.Values.modelsAsService | default false) }}Managed{{ else }}Removed{{ end }}
       nim:
         managementState: Managed
       rawDeploymentServiceConfig: Headless

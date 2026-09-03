@@ -14,7 +14,7 @@ featureStore: false         # Feast operator
 # Enabling it before the gateway is created leaves the DataScienceCluster Not Ready
 # (modelsasservice component stuck) and the maas-api pod never starts.
 # Enable it in Phase 5 (MaaS) by re-applying: helm template rhoai ./gitops/instance/rhoai --set modelsAsService=true | oc apply -f -
-modelsAsService: false     # KServe models-as-service — enable in Phase 5 (MaaS), not here
+modelsAsService: false     # AIGateway models-as-a-service — enable in Phase 6 (MaaS), not here
 distributedWorkloads: false # Distributed workloads
 kueue: false                 # Kueue operator
 ogx: true                    # OGX operator (replaces LlamaStack in RHOAI 3.5)

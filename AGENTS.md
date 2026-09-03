@@ -107,7 +107,7 @@ Install Connectivity Link (RHCL 1.3.5+), LeaderWorkerSet, **monitoring operators
 - Do NOT install Kueue unless explicitly required. 
 - `modelsAsService` must be `false` during this phase. 
 - Apply connectivity-link first — Authorino must be running before RHOAI.
-- The DSC spec in RHOAI 3.5 replaces `llamastackoperator` with `ogx`, and adds `trainer` and `mcplifecycleoperator` components.
+- The DSC spec in RHOAI 3.5 (v2 API) replaces `llamastackoperator` with `ogx`, adds `trainer`, `mcplifecycleoperator`, and `aigateway` components. MaaS moved from `kserve.modelsAsService` to `aigateway.modelsAsAService` (the old field is deprecated but respected through 3.6).
 **Kuadrant `Ready: False` after creating the CR** — this is **expected** at this phase. The operator requires a `GatewayClass` to report `Ready: True`, but the GatewayClass is created in Phase 5. Verify Authorino and Limitador pods are running in `kuadrant-system` — that confirms the operator is functional. Kuadrant becomes `Ready` in Phase 5 after the gateway is deployed and the operator pod is restarted. Do not search the marketplace or install any gateway operator.
 **Full guide:** [docs/phases/03-operators-rhoai.md](docs/phases/03-operators-rhoai.md)
 
@@ -135,7 +135,7 @@ Deploy the gateway, a namespace, and an LLMInferenceService, then test the endpo
 
 ### Phase 6 — MaaS
 Deploy the MaaS gateway, configure Authorino TLS, bootstrap the subscription stack, and verify API key creation.
-**Critical:** Order matters: gateway → database → enable `modelsAsService=true` → Authorino TLS. Without Authorino TLS, the API key endpoint returns 500.
+**Critical:** Order matters: gateway → database → enable `modelsAsService=true` (sets `aigateway.modelsAsAService: Managed` in DSC v2) → Authorino TLS. Without Authorino TLS, the API key endpoint returns 500.
 **RHOAI 3.5 change:** The default MaaS infrastructure namespace is now `redhat-ai-gateway-infra` (was `redhat-ods-applications` in 3.4). The `maas-db-config` secret and `maas-api` deployment live in this namespace. The `Tenant` CR is deprecated — replaced by `AITenant` + `MaasTenantConfig`.
 **RHOAI 3.5 change:** MaaS now supports OpenAI-compatible body-based model routing (`/v1/chat/completions` with model name in the request body).
 **Authorino TLS race condition:** The `odh-model-controller`'s `gateway-auth-bootstrap` controller does a one-shot check when it sees the gateway annotation — if Authorino TLS is not fully active at that moment, it skips EnvoyFilter creation and never retries. Steps 4a–4c must be verified before applying 4d. If the EnvoyFilter is missing after 4d, restart `odh-model-controller`.
