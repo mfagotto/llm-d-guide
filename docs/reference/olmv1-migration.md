@@ -24,6 +24,36 @@ This guide supports both:
 | Approval | `installPlanApproval: Manual/Automatic` | Continuous reconciliation (no InstallPlan) |
 | Wait condition | `CSV` phase = `Succeeded` | `ClusterExtension` condition `Installed = True` |
 
+## AllNamespaces Install Mode Requirement
+
+OLMv1 `ClusterExtension` **only supports bundles that declare `AllNamespaces` install mode**. Bundles limited to `OwnNamespace` or `SingleNamespace` fail with:
+
+```
+unsupported bundle: bundle does not support AllNamespaces install mode
+```
+
+This constraint means that **not all operators in this guide can use OLMv1** on OCP 4.21+. The compatibility matrix (validated on OCP 4.21.18):
+
+| Operator | OLMv1 compatible | Usable with OLMv1 in this guide | Install method on 4.21+ |
+|---|---|---|---|
+| cert-manager | Yes | Yes | Helm `--set olmVersion=v1` |
+| Connectivity Link (RHCL) | Yes | Yes | `cluster-extension.yaml` |
+| Tempo | Yes | **No** — RHOAI detects via CSV only | OLMv0 (`oc apply -k`) |
+| OpenTelemetry | Yes | **No** — RHOAI detects via CSV only | OLMv0 (`oc apply -k`) |
+| RHOAI | Yes | Yes | Helm `--set olmVersion=v1` |
+| COO | Yes | Yes | `cluster-extension.yaml` |
+| **NFD** | **No** — OwnNamespace only | **No** | `install.sh` (always OLMv0) |
+| **NVIDIA GPU** | **No** — OwnNamespace only | **No** | `install.sh` (always OLMv0) |
+| **LeaderWorkerSet** | **No** — OwnNamespace only | **No** | `oc apply -k` (always OLMv0) |
+
+The `install.sh` scripts for NFD and NVIDIA always use OLMv0 regardless of OCP version. LeaderWorkerSet must be installed via `oc apply -k gitops/operators/leader-worker-set` (which applies the OLMv0 `operator.yaml`).
+
+The `cluster-extension.yaml` files for these three operators are kept in the repo for forward compatibility — they will work once the upstream bundles add AllNamespaces support.
+
+Additionally, **Tempo and OpenTelemetry must also use OLMv0** in this guide. While their bundles support AllNamespaces (OLMv1 works technically), RHOAI 3.5's monitoring controller detects these operators by checking for a CSV — it does not recognize OLMv1 ClusterExtensions. Installing Tempo or OpenTelemetry via OLMv1 causes the monitoring stack precondition to fail with `"Tempo operator must be installed for traces configuration"`, preventing TempoMonolithic creation.
+
+Until RHOAI adds OLMv1 operator detection, use OLMv0 for Tempo and OpenTelemetry.
+
 ## ClusterExtension Anatomy
 
 A `ClusterExtension` replaces four OLMv0 resources (`Subscription`, `InstallPlan`, `CSV`, `OperatorGroup`) with one:
@@ -32,22 +62,24 @@ A `ClusterExtension` replaces four OLMv0 resources (`Subscription`, `InstallPlan
 apiVersion: olm.operatorframework.io/v1
 kind: ClusterExtension
 metadata:
-  name: nfd
+  name: rhcl-operator
 spec:
-  namespace: openshift-nfd                    # where operator pods run
+  namespace: openshift-operators               # where operator pods run
   serviceAccount:
-    name: nfd-installer                       # pre-created SA with RBAC
+    name: rhcl-installer                       # pre-created SA with RBAC
   source:
     sourceType: Catalog
     catalog:
-      packageName: nfd                        # same as OLMv0 Subscription .spec.name
-      channels:                               # optional — omit to use default channel
+      packageName: rhcl-operator               # same as OLMv0 Subscription .spec.name
+      channels:                                # optional — omit to use default channel
       - stable
   install:
     preflight:
       crdUpgradeSafety:
-        disabled: false                       # safety check for CRD schema changes
+        enforcement: Strict                    # safety check for CRD schema changes
 ```
+
+> **`crdUpgradeSafety` schema note:** The field changed from `disabled: true/false` to `enforcement: None/Strict`. Using the old `disabled` field on current OCP 4.21 produces a validation error: `spec.install.preflight.crdUpgradeSafety.enforcement: Required value`.
 
 ### Required Supporting Resources
 
@@ -137,14 +169,14 @@ The Helm chart renders either a `Subscription` + `OperatorGroup` (v0) or a `Serv
 
 ### install.sh Scripts (NFD, NVIDIA)
 
-The `install.sh` scripts for NFD and NVIDIA auto-detect the OCP version:
+The `install.sh` scripts for NFD and NVIDIA **always use OLMv0** because these operators do not support `AllNamespaces` install mode (required by OLMv1):
 
 ```bash
-./gitops/operators/nfd/install.sh      # auto-detects 4.20 vs 4.21+
-./gitops/operators/nvidia/install.sh   # auto-detects 4.20 vs 4.21+
+./gitops/operators/nfd/install.sh      # always OLMv0 (Subscription)
+./gitops/operators/nvidia/install.sh   # always OLMv0 (Subscription)
 ```
 
-On 4.20, they query `packagemanifest` for the channel/CSV and apply `operator.yaml`. On 4.21+, they apply `cluster-extension.yaml` directly (channel resolution is handled by the OLMv1 resolver).
+Both scripts query `packagemanifest` for the channel/CSV and apply `operator.yaml` regardless of OCP version. When these bundles add AllNamespaces support upstream, the scripts can be updated to use OLMv1 on 4.21+.
 
 ## Wait Conditions
 
@@ -168,27 +200,51 @@ oc wait --for=condition=Installed clusterextension/<name> --timeout=300s
 
 ## Operator Reference
 
-| Operator | Package Name | ClusterExtension Name | Namespace | File |
-|---|---|---|---|---|
-| cert-manager | `openshift-cert-manager-operator` | `openshift-cert-manager-operator` | `cert-manager-operator` | Helm (`--set olmVersion=v1`) |
-| NFD | `nfd` | `nfd` | `openshift-nfd` | `cluster-extension.yaml` |
-| NVIDIA GPU | `gpu-operator-certified` | `gpu-operator-certified` | `nvidia-gpu-operator` | `cluster-extension.yaml` |
-| Connectivity Link | `rhcl-operator` | `rhcl-operator` | `openshift-operators` | `cluster-extension.yaml` |
-| LeaderWorkerSet | `leader-worker-set` | `leader-worker-set` | `openshift-lws-operator` | `cluster-extension.yaml` |
-| Tempo | `tempo-product` | `tempo-product` | `openshift-tempo-operator` | `cluster-extension.yaml` |
-| OpenTelemetry | `opentelemetry-product` | `opentelemetry-product` | `openshift-opentelemetry-operator` | `cluster-extension.yaml` |
-| COO | `cluster-observability-operator` | `cluster-observability-operator` | `openshift-cluster-observability-operator` | `cluster-extension.yaml` |
-| RHOAI | `rhods-operator` | `rhods-operator` | `redhat-ods-operator` | Helm (`--set olmVersion=v1`) |
+| Operator | Package Name | OLMv1 on 4.21+ | Namespace |
+|---|---|---|---|
+| cert-manager | `openshift-cert-manager-operator` | Helm (`--set olmVersion=v1`) | `cert-manager-operator` |
+| Connectivity Link | `rhcl-operator` | `cluster-extension.yaml` | `openshift-operators` |
+| COO | `cluster-observability-operator` | `cluster-extension.yaml` | `openshift-cluster-observability-operator` |
+| RHOAI | `rhods-operator` | Helm (`--set olmVersion=v1`) | `redhat-ods-operator` |
+| Tempo | `tempo-product` | OLMv0 only (RHOAI CSV check) | `openshift-tempo-operator` |
+| OpenTelemetry | `opentelemetry-product` | OLMv0 only (RHOAI CSV check) | `openshift-opentelemetry-operator` |
+| NFD | `nfd` | OLMv0 only (OwnNamespace) | `openshift-nfd` |
+| NVIDIA GPU | `gpu-operator-certified` | OLMv0 only (OwnNamespace) | `nvidia-gpu-operator` |
+| LeaderWorkerSet | `leader-worker-set` | OLMv0 only (OwnNamespace) | `openshift-lws-operator` |
+
+## OLMv0 Support Status
+
+OLMv0 (`Subscription` + `CSV` + `InstallPlan`) is **fully supported throughout the OCP 4 lifecycle**. There is no deprecation warning on OCP 4.21. Both OLM systems coexist and work correctly side by side.
+
+Using OLMv0 for NFD, NVIDIA, and LeaderWorkerSet on OCP 4.21+ is the correct and supported approach — not a workaround.
+
+## In-Place Migration from OLMv0 to OLMv1
+
+**In-place migration is not supported.** OLMv1 uses Helm internally to manage operator resources. When it encounters pre-existing CRDs (created by OLMv0), it rejects them with:
+
+```
+CustomResourceDefinition '<name>' already exists in namespace '' and cannot be managed by operator-controller
+```
+
+This is not a label or annotation issue — it is an internal Helm release ownership check. Removing OLMv0 labels (`olm.managed`, `operators.coreos.com/...`) and adding Helm annotations (`meta.helm.sh/release-name`, `app.kubernetes.io/managed-by: Helm`) does not resolve it. Deleting the CRDs would work but cascade-deletes all CR instances (e.g. TempoMonolithic, TempoStack) — unacceptable in production.
+
+**Consequence for this guide:** Operators installed via OLMv0 must stay on OLMv0 for the lifetime of the cluster. OLMv1 (`cluster-extension.yaml`) is only for **fresh installs** where no CRDs from the operator exist yet. Do not attempt to migrate a running operator from OLMv0 to OLMv1.
+
+> Validated on OCP 4.21.18 with Tempo Operator — deleting Subscription + CSV + OperatorGroup and applying ClusterExtension failed on CRD ownership. Rolled back to OLMv0 successfully; operator and instances unaffected.
 
 ## Forward-Looking: OCP 4.22+
 
-Red Hat has indicated that the Marketplace `CatalogSource` resources (used by OLMv0) may be removed in OCP 4.22. When that happens:
+**OwnNamespace/SingleNamespace support in OLMv1:** The `NewOLMOwnSingleNamespace` feature gate is promoted to GA in OCP 4.22 ([openshift/api#2527](https://github.com/openshift/api/pull/2527)). Once on 4.22+, operators like NFD, NVIDIA, and LeaderWorkerSet should be installable via `ClusterExtension` using a `watchNamespace` field — no feature gate required. The `cluster-extension.yaml` files kept in this repo for those operators will become usable at that point (with `watchNamespace` added).
+
+> **Tech Preview workaround on 4.21:** The same feature is available as Tech Preview via the `TechPreviewNoUpgrade` feature set. This is **not recommended** — it is a one-way gate that blocks all future cluster upgrades and enables every other Tech Preview feature simultaneously.
+
+**CatalogSource removal:** Red Hat has indicated that the Marketplace `CatalogSource` resources (used by OLMv0) may be removed in a future OCP release. When that happens:
 
 - All `packagemanifest` lookups will stop working
 - `Subscription`-based installs will no longer resolve packages
 - Migration to `ClusterExtension` CRs will be mandatory
 
-This guide's OLMv1 path (`cluster-extension.yaml` files and `--set olmVersion=v1`) is forward-compatible with that change. The OLMv0 path (`operator.yaml`) will require removal in a future guide update.
+This guide's OLMv1 path (`cluster-extension.yaml` files and `--set olmVersion=v1`) is forward-compatible with that change. The OLMv0 path (`operator.yaml`) will require update in a future guide revision.
 
 ## Troubleshooting
 
@@ -197,8 +253,12 @@ This guide's OLMv1 path (`cluster-extension.yaml` files and `--set olmVersion=v1
 | `ClusterExtension` stuck in `Progressing` | ServiceAccount missing or insufficient RBAC | Verify SA exists and has `cluster-admin` binding |
 | `no package found` error | ClusterCatalog not available or package name mismatch | `oc get clustercatalog` — all should show `Available`; verify `packageName` matches the catalog entry |
 | Both `Subscription` and `ClusterExtension` exist for same operator | Mixed install — one blocks the other | Delete the one you don't want; never manage the same operator with both OLM versions |
-| CRD upgrade safety check blocks update | Schema change detected in CRD | Review the change; if safe, set `install.preflight.crdUpgradeSafety.disabled: true` temporarily |
+| CRD upgrade safety check blocks update | Schema change detected in CRD | Review the change; if safe, set `install.preflight.crdUpgradeSafety.enforcement: None` temporarily |
+| `unsupported bundle: bundle does not support AllNamespaces install mode` | Operator bundle only supports `OwnNamespace` | Use OLMv0 (`operator.yaml` / `install.sh`) — see AllNamespaces compatibility table above |
+| `spec.install.preflight.crdUpgradeSafety.enforcement: Required value` | Old `disabled: true/false` field used | Replace `disabled: false` with `enforcement: Strict` (or `enforcement: None` to skip checks) |
 | `ClusterExtension` shows `Installed=True` but no pods running | Namespace does not exist or SA lacks permissions in target namespace | Ensure the namespace was created before applying the ClusterExtension |
+| `already exists and cannot be managed by operator-controller` | CRDs were created by OLMv0 — in-place migration is not supported | Stay on OLMv0 for this operator; OLMv1 is only for fresh installs without pre-existing CRDs |
+| `Tempo operator must be installed for traces configuration` | RHOAI monitoring controller detects Tempo/OTel via CSV only — OLMv1 installs are invisible | Use OLMv0 for Tempo and OpenTelemetry until RHOAI adds OLMv1 awareness |
 
 ## References
 

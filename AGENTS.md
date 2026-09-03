@@ -38,7 +38,7 @@ troubleshooting) is in [`docs/reference/`](docs/reference/).
 | `INFRA_ID` | `oc get infrastructure cluster -o jsonpath='{.status.infrastructureName}'` | Phase 2 |
 | `AMI_ID` | `oc get machineset -n openshift-machine-api -o jsonpath='{.items[0].spec.template.spec.providerSpec.value.ami.id}'` | Phase 2 |
 
-> **Note on `OCP_MINOR`:** Determines the operator install method. OCP 4.20 uses OLMv0 (`Subscription` + `InstallPlan`). OCP 4.21+ uses OLMv1 (`ClusterExtension`). Both systems coexist on 4.21, but this guide aligns with the OLMv1 path for forward compatibility. For Helm charts (cert-manager, RHOAI), pass `--set olmVersion=v1` on OCP 4.21+. For plain-YAML operators, apply `cluster-extension.yaml` instead of `operator.yaml`. The `install.sh` scripts for NFD and NVIDIA auto-detect the OCP version.
+> **Note on `OCP_MINOR`:** Determines the operator install method. OCP 4.20 uses OLMv0 (`Subscription` + `InstallPlan`). OCP 4.21+ uses OLMv1 (`ClusterExtension`) for operators whose bundles support `AllNamespaces` install mode. Both systems coexist on 4.21. For Helm charts (cert-manager, RHOAI), pass `--set olmVersion=v1` on OCP 4.21+. For compatible plain-YAML operators (RHCL, COO), apply `cluster-extension.yaml` on 4.21+. **Five operators must always use OLMv0:** NFD, NVIDIA, and LeaderWorkerSet (bundles don't support AllNamespaces mode); Tempo and OpenTelemetry (RHOAI 3.5 detects them via CSV only — OLMv1 installs are invisible to the monitoring controller).
 
 > **Note on `AMI_ID`:** Every OCP cluster on AWS already has worker MachineSets whose `providerSpec` contains the exact RHCOS AMI the cluster was installed with — correct image, region, and architecture. Never attempt to discover this via `aws ec2 describe-images`.
 
@@ -95,14 +95,14 @@ Install cert-manager operator and automate TLS certificate lifecycle.
 
 ### Phase 2 — GPU Nodes + NFD + NVIDIA GPU Operator
 Add GPU worker nodes and install hardware detection and driver stack.
-**Critical:** Ask the user how many AZs (3 for production, 1 for testing). ClusterPolicy webhook may reject the CR if NFD labels aren't present yet — apply NFD first. The `install.sh` scripts for NFD and NVIDIA auto-detect the OCP version and use the correct install method (OLMv0 or OLMv1).
+**Critical:** Ask the user how many AZs (3 for production, 1 for testing). ClusterPolicy webhook may reject the CR if NFD labels aren't present yet — apply NFD first. **NFD and NVIDIA bundles do not support AllNamespaces install mode** — the `install.sh` scripts always use OLMv0 regardless of OCP version. Wait for CSV `Succeeded` on both 4.20 and 4.21+.
 **Full guide:** [docs/phases/02-gpu-nodes.md](docs/phases/02-gpu-nodes.md)
 
 ### Phase 3 — Core Operators + RHOAI
 Install Connectivity Link (RHCL 1.3.5+), LeaderWorkerSet, **monitoring operators (Tempo, OpenTelemetry)**, and RHOAI, then configure the DataScienceCluster.
 **Critical:** 
 - **Operator install order matters:** Connectivity Link → LeaderWorkerSet → **Tempo + OpenTelemetry (BEFORE RHOAI)** → RHOAI Operator → RHOAI Instance. The monitoring operators must be installed BEFORE RHOAI because the DSCInitialization requires them for monitoring stack initialization.
-- **OLMv0 vs OLMv1:** For plain-YAML operators (Connectivity Link, LeaderWorkerSet, Tempo, OpenTelemetry), apply `cluster-extension.yaml` on OCP 4.21+ or `operator.yaml` on 4.20. For RHOAI (Helm chart), pass `--set olmVersion=v1` on 4.21+. Wait conditions differ: on 4.20, wait for `CSV Succeeded`; on 4.21+, wait for `ClusterExtension` condition `Installed=True`.
+- **OLMv0 vs OLMv1:** For compatible plain-YAML operators (Connectivity Link), apply `cluster-extension.yaml` on OCP 4.21+ or `operator.yaml` on 4.20. **LeaderWorkerSet does not support AllNamespaces mode** — always use `oc apply -k gitops/operators/leader-worker-set` (OLMv0) regardless of OCP version. **Tempo and OpenTelemetry must also use OLMv0** — RHOAI 3.5's monitoring controller detects these operators via CSV; OLMv1 installs are invisible, causing the monitoring precondition to fail. For RHOAI (Helm chart), pass `--set olmVersion=v1` on 4.21+. Wait conditions differ: on 4.20, wait for `CSV Succeeded`; on 4.21+, wait for `ClusterExtension` condition `Installed=True` (for OLMv1 operators) or `CSV Succeeded` (for OLMv0 operators like LeaderWorkerSet, Tempo, OpenTelemetry).
 - Enable Kuadrant observability (`spec.observability.enable: true`) when creating the Kuadrant CR — required for the monitoring stack in Phase 4.
 - Do NOT install Kueue unless explicitly required. 
 - `modelsAsService` must be `false` during this phase. 
@@ -179,7 +179,7 @@ If something went wrong, paste the failing command and its output and say which 
 - **Prefer `oc apply -k`** over raw `oc apply -f` for kustomize paths — it respects the overlay ordering. The RHOAI **operator** install is an exception: use `helm template rhoai-operator ./gitops/operators/rhoai | oc apply -f -` (see README §2.5).
 - **Never use `aws ec2 describe-images` to look up `AMI_ID`** — the correct RHCOS AMI is already embedded in the cluster's existing MachineSets; read it with `oc get machineset -n openshift-machine-api -o jsonpath='{.items[0].spec.template.spec.providerSpec.value.ami.id}'`.
 - **Never ask the user for auto-derived variables** (`OCP_MINOR`, `AWS_REGION`, `AMI_ID`, `INFRA_ID`, `CLUSTER_DOMAIN`) — always derive them from the cluster using the commands in the Environment Variables table.
-- **Use the correct OLM path based on `OCP_MINOR`:** On 4.20, apply `operator.yaml` and wait for `CSV Succeeded`. On 4.21+, apply `cluster-extension.yaml` and wait for `oc get clusterextension <name> -o jsonpath='{.status.conditions[?(@.type=="Installed")].status}'` to return `True`. For Helm charts, pass `--set olmVersion=v1` on 4.21+. Never mix OLMv0 and OLMv1 for the same operator.
+- **Use the correct OLM path based on `OCP_MINOR`:** On 4.20, apply `operator.yaml` and wait for `CSV Succeeded`. On 4.21+, apply `cluster-extension.yaml` for compatible operators and wait for `ClusterExtension` condition `Installed=True`. For Helm charts, pass `--set olmVersion=v1` on 4.21+. **Exception — five operators must always use OLMv0:** NFD, NVIDIA, and LeaderWorkerSet (bundles don't support AllNamespaces mode); Tempo and OpenTelemetry (RHOAI 3.5 detects them via CSV only). Never mix OLMv0 and OLMv1 for the same operator.
 - **Always run `./scripts/validate-cluster-domain.sh`** (do not just read it) before applying the cert-manager-route53 chart, and stop to confirm the extracted domain with the user before proceeding.
 - **Never re-implement script logic inline** — if a named script exists for a task (e.g. `preflight-validation.sh`, `validate-cluster-domain.sh`), run it. Do not substitute your own commands.
 - If a command produces unexpected output, **stop and report** rather than continuing.

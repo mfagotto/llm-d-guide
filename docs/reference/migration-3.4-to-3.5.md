@@ -105,7 +105,49 @@ No action required unless you use a custom scorer configuration.
 
 ## OLMv1 support (OCP 4.21+)
 
-RHOAI 3.5 on OCP 4.21 supports both OLMv0 and OLMv1. Each operator directory now ships both `operator.yaml` (OLMv0) and `cluster-extension.yaml` (OLMv1). Helm charts accept `--set olmVersion=v1`. The `install.sh` scripts for NFD and NVIDIA auto-detect the OCP version.
+RHOAI 3.5 on OCP 4.21 supports both OLMv0 and OLMv1. Each operator directory ships both `operator.yaml` (OLMv0) and `cluster-extension.yaml` (OLMv1). Helm charts accept `--set olmVersion=v1`.
+
+### AllNamespaces install mode constraint
+
+OLMv1 `ClusterExtension` only works with bundles that support `AllNamespaces` install mode. Three operators in this guide do **not** — their bundles are limited to `OwnNamespace`:
+
+| Operator | OLMv1 compatible | Install method on 4.21+ |
+|---|---|---|
+| NFD | No | `install.sh` (always OLMv0) |
+| NVIDIA GPU Operator | No | `install.sh` (always OLMv0) |
+| LeaderWorkerSet | No | `oc apply -k` (always OLMv0) |
+
+The `install.sh` scripts for NFD and NVIDIA always use OLMv0 regardless of OCP version. The `cluster-extension.yaml` files are kept for forward compatibility.
+
+### In-place OLMv0 → OLMv1 migration not supported
+
+Operators installed via OLMv0 **cannot be migrated in-place to OLMv1**. OLMv1 uses Helm internally and refuses to adopt pre-existing resources (CRDs, ClusterRoles, Roles) it didn't create — each one fails individually with `"already exists and cannot be managed by operator-controller"`. Even after deleting all OLMv0 leftovers, the migration requires a full teardown including CRD deletion (which cascade-deletes all CR instances).
+
+**If your cluster was installed with RHOAI 3.4 (OLMv0), keep all operators on OLMv0.** OLMv1 is only for fresh installs on OCP 4.21+. OLMv0 remains fully supported throughout the OCP 4 lifecycle.
+
+### RHOAI 3.5 monitoring controller only detects operators via CSV
+
+RHOAI 3.5's monitoring controller checks for Tempo and OpenTelemetry operators by looking for their CSV (OLMv0). Operators installed via OLMv1 (`ClusterExtension`) are invisible to this check — the monitoring precondition fails with `"Tempo operator must be installed for traces configuration"`, preventing TempoMonolithic creation. **Tempo and OpenTelemetry must use OLMv0** until RHOAI adds OLMv1 awareness.
+
+### `crdUpgradeSafety` schema change
+
+The `ClusterExtension` CRD schema changed the preflight safety field:
+
+```yaml
+# Old (fails with validation error on current OCP 4.21)
+install:
+  preflight:
+    crdUpgradeSafety:
+      disabled: false
+
+# New (correct)
+install:
+  preflight:
+    crdUpgradeSafety:
+      enforcement: Strict    # or None to disable
+```
+
+All `cluster-extension.yaml` files in this guide have been updated. If you have custom ClusterExtension resources, update them to use `enforcement` instead of `disabled`.
 
 See [OLMv1 Migration Reference](olmv1-migration.md) for full details.
 

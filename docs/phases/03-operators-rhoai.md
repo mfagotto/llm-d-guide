@@ -78,20 +78,19 @@ oc get kuadrant kuadrant -n kuadrant-system -o jsonpath='{.spec.observability.en
 
 ### Step 2 — Leader Worker Set
 
+> **OLMv0 only:** The LeaderWorkerSet bundle does not support `AllNamespaces` install mode,
+> so OLMv1 (`ClusterExtension`) cannot be used. Always install via `oc apply -k` (OLMv0)
+> regardless of OCP version.
+
 ```bash
-# OCP 4.20 (OLMv0):
+# Always OLMv0 (both OCP 4.20 and 4.21+):
 until oc apply -k ./gitops/operators/leader-worker-set; do
   echo "Waiting for LeaderWorkerSet CRD to become available..."
   sleep 10
 done
 oc get csv -n openshift-lws-operator -w | grep -E "leader-worker-set"
 
-# OCP 4.21+ (OLMv1):
-oc apply -f gitops/operators/leader-worker-set/cluster-extension.yaml
-oc wait --for='jsonpath={.status.conditions[?(@.type=="Installed")].status}=True' \
-  clusterextension/leader-worker-set --timeout=300s
-
-# Wait for CRDs (both OLMv0 and OLMv1)
+# Wait for CRDs
 oc wait --for=condition=Established crd/leaderworkersetoperators.operator.openshift.io --timeout=300s
 oc wait --for=condition=Established crd/leaderworkersets.leaderworkerset.x-k8s.io --timeout=300s
 ```
@@ -100,30 +99,24 @@ oc wait --for=condition=Established crd/leaderworkersets.leaderworkerset.x-k8s.i
 
 **Important:** Tempo and OpenTelemetry operators must be installed BEFORE RHOAI. The RHOAI DataScienceInitialization (DSCi) requires these operators to be present when it initializes the monitoring stack. Installing them after RHOAI causes the monitoring reconciliation to fail.
 
+> **OLMv0 only:** RHOAI 3.5's monitoring controller detects Tempo and OpenTelemetry by checking
+> for their CSV. Operators installed via OLMv1 (`ClusterExtension`) are invisible to this check,
+> causing the monitoring precondition to fail. Always use OLMv0 for these two operators.
+
 ```bash
-# a) Tempo Operator (distributed tracing)
-
-# OCP 4.20 (OLMv0):
+# a) Tempo Operator (distributed tracing) — always OLMv0
 oc apply -k gitops/operators/tempo-operator
-oc get csv -n openshift-opentelemetry-operator -w | grep -E "tempo"
+oc get csv -n openshift-tempo-operator -w | grep -E "tempo"
+oc wait --for=jsonpath='{.status.phase}'=Succeeded csv \
+  -n openshift-tempo-operator -l operators.coreos.com/tempo-product.openshift-tempo-operator= --timeout=300s
 
-# OCP 4.21+ (OLMv1):
-oc apply -f gitops/operators/tempo-operator/cluster-extension.yaml
-oc wait --for='jsonpath={.status.conditions[?(@.type=="Installed")].status}=True' \
-  clusterextension/tempo-product --timeout=300s
-
-# b) OpenTelemetry Operator
-
-# OCP 4.20 (OLMv0):
+# b) OpenTelemetry Operator — always OLMv0
 oc apply -k gitops/operators/opentelemetry-operator
 oc get csv -n openshift-opentelemetry-operator -w | grep -E "opentelemetry"
+oc wait --for=jsonpath='{.status.phase}'=Succeeded csv \
+  -n openshift-opentelemetry-operator -l operators.coreos.com/opentelemetry-product.openshift-opentelemetry-operator= --timeout=300s
 
-# OCP 4.21+ (OLMv1):
-oc apply -f gitops/operators/opentelemetry-operator/cluster-extension.yaml
-oc wait --for='jsonpath={.status.conditions[?(@.type=="Installed")].status}=True' \
-  clusterextension/opentelemetry-product --timeout=300s
-
-# Wait for CRD (both OLMv0 and OLMv1)
+# Wait for CRD
 oc wait --for=condition=Established crd/instrumentations.opentelemetry.io --timeout=120s
 ```
 

@@ -35,5 +35,5 @@ spec:
   install:
     preflight:
       crdUpgradeSafety:
-        disabled: false
+        enforcement: Strict
 {{- end }}
