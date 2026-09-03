@@ -2,10 +2,10 @@ apiVersion: perses.dev/v1alpha2
 kind: PersesDashboard
 metadata:
   name: llm-d-external-models
-  namespace: redhat-ods-monitoring
+  namespace: openshift-cluster-observability-operator
   labels:
     app: llm-d
-    app.kubernetes.io/part-of: dashboard
+    app.kubernetes.io/part-of: monitoring
     app.opendatahub.io/dashboard: "true"
 spec:
   config:

@@ -1,4 +1,5 @@
-# OLMv1 (OCP 4.21+) — use this instead of operator.yaml
+# OLMv1 (OCP 4.21+) — DO NOT USE: RHOAI 3.5 detects OpenTelemetry via CSV only;
+# OLMv1 installs are invisible to the monitoring controller. Always use operator.yaml.
 apiVersion: v1
 kind: Namespace
 metadata:

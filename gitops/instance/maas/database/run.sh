@@ -1,6 +1,6 @@
 #!/bin/sh
 APP_NAME=maas-database
-NAMESPACE=${NAMESPACE:-redhat-ods-applications}
+NAMESPACE=${NAMESPACE:-redhat-ai-gateway-infra}
 
 # Dry-run (password will be random since lookup is skipped in template mode):
 helm template . --name-template ${APP_NAME} --namespace ${NAMESPACE}

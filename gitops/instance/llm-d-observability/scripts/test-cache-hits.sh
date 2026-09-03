@@ -37,8 +37,10 @@ else
     echo "Current vLLM args:"
     echo "$VLLM_ARGS" | sed 's/.*vllm serve/vllm serve/' | tr ' ' '\n' | grep -E "^--" | head -10
     echo ""
-    echo "To enable prefix caching, add to vllmAdditionalArgs in values.yaml:"
-    echo "  vllmAdditionalArgs: \"--enable-prefix-caching --disable-uvicorn-access-log ...\""
+    echo "To enable prefix caching, set in your per-model values.yaml:"
+    echo "  vllm:"
+    echo "    prefixCaching:"
+    echo "      enabled: true"
     echo ""
     echo "Continuing anyway - you'll see how cache WOULD work if enabled..."
     echo ""

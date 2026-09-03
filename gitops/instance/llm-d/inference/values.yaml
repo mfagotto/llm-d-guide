@@ -107,7 +107,7 @@ vllm:
 
 # ── Extra env vars ────────────────────────────────────────────────────────────
 # Appended to the main container after any auto-injected CPU env vars above.
-# Use this for tracing, HF tokens, and anything not covered by vllmAdditionalArgs.
+# Use this for tracing, HF tokens, and anything not covered by vllm.extraArgs.
 env: []
 # env:
 #   - name: HF_TOKEN

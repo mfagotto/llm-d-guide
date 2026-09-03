@@ -146,9 +146,9 @@ storage:
   uri: hf://Qwen/Qwen3-4B
 model:
   name: Qwen/Qwen3-4B
-env:
-  - name: VLLM_ADDITIONAL_ARGS
-    value: "--disable-uvicorn-access-log"
+vllm:
+  extraArgs:
+    - "--disable-access-log-for-endpoints=/health,/metrics,/ping"
 resources:
   limits: { cpu: "1", memory: 8Gi, gpuCount: "1" }
   requests: { cpu: "1", memory: 8Gi, gpuCount: "1" }
@@ -169,9 +169,9 @@ model:
 resources:
   limits: { cpu: "4", memory: 16Gi, gpuCount: "1" }
   requests: { cpu: "1", memory: 8Gi, gpuCount: "1" }
-env:
-  - name: VLLM_ADDITIONAL_ARGS
-    value: "--disable-uvicorn-access-log"
+vllm:
+  extraArgs:
+    - "--disable-access-log-for-endpoints=/health,/metrics,/ping"
 EOF
       ;;
     intelligent-inference/gpt-oss-20b-modelcar)
@@ -189,9 +189,9 @@ model:
 resources:
   limits: { cpu: "4", memory: 16Gi, gpuCount: "1" }
   requests: { cpu: "1", memory: 8Gi, gpuCount: "1" }
-env:
-  - name: VLLM_ADDITIONAL_ARGS
-    value: "--disable-uvicorn-access-log"
+vllm:
+  extraArgs:
+    - "--disable-access-log-for-endpoints=/health,/metrics,/ping"
 EOF
       ;;
     intelligent-inference/gpt-oss-20b-huggingface-with-pvc)
@@ -212,9 +212,9 @@ model:
 resources:
   limits: { cpu: "4", memory: 16Gi, gpuCount: "1" }
   requests: { cpu: "1", memory: 8Gi, gpuCount: "1" }
-env:
-  - name: VLLM_ADDITIONAL_ARGS
-    value: "--disable-uvicorn-access-log"
+vllm:
+  extraArgs:
+    - "--disable-access-log-for-endpoints=/health,/metrics,/ping"
 EOF
       ;;
     pd-disaggregation/qwen3-0.6b)
