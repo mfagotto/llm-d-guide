@@ -1,18 +1,18 @@
 # Red Hat OpenShift AI operator (OLM subscription).
 #
-# Default path is GA on stable-3.x (olmProfile: stable). For 3.4 early access,
-# set olmProfile: ea (beta channel + rhods-operator.3.4.0-ea.2), or export
-# RHOAI_OLM_PROFILE=ea and pass --set olmProfile=$RHOAI_OLM_PROFILE to helm.
+# Default path is GA on stable-3.x (olmProfile: stable). For early access,
+# set olmProfile: ea (alpha channel), or export RHOAI_OLM_PROFILE=ea and
+# pass --set olmProfile=$RHOAI_OLM_PROFILE to helm.
 #
 # --- Combination reference (pin or override with channel + startingCSV) ---
 #
-# GA stable 3.3.x (default):
+# GA stable 3.5 (default):
 #   channel: stable-3.x
-#   startingCSV: rhods-operator.3.3.2
+#   startingCSV: rhods-operator.3.5.0
 #
-# 3.4 early access (beta channel):
-#   channel: beta
-#   startingCSV: rhods-operator.3.4.0-ea.2
+# Early access (alpha channel — 'beta' is legacy, do not use):
+#   channel: alpha
+#   startingCSV: <ea-csv-version>
 #
 # To use EA from defaults, switch olmProfile (see commented line below).
 
@@ -22,10 +22,10 @@ olmProfile: stable
 presets:
   stable:
     channel: stable-3.x
-    startingCSV: rhods-operator.3.4.0
+    startingCSV: rhods-operator.3.5.0
   ea:
-    channel: beta
-    startingCSV: rhods-operator.3.4.0-ea.2
+    channel: alpha
+    startingCSV: ""
 
 # Optional: set both to override olmProfile (leave empty to use preset)
 channel: ""
@@ -45,10 +45,10 @@ operatorGroup:
   name: rhods-operator
 
 # --- Copy-paste overrides (optional): set both channel and startingCSV, or use olmProfile above.
-# GA stable 3.3.x:
+# GA stable 3.5:
 # channel: stable-3.x
-# startingCSV: rhods-operator.3.3.2
+# startingCSV: rhods-operator.3.5.0
 #
-# 3.4 early access (beta channel):
-# channel: beta
-# startingCSV: rhods-operator.3.4.0-ea.2
+# Early access (alpha channel):
+# channel: alpha
+# startingCSV: <ea-csv-version>

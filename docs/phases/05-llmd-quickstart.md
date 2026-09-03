@@ -156,7 +156,7 @@ resources:
   requests: { cpu: "1", memory: 8Gi, gpuCount: "1" }
 vllm:
   extraArgs:
-    - "--disable-uvicorn-access-log"
+    - "--disable-access-log-for-endpoints /health,/metrics,/ping"
     - "--enable-auto-tool-choice"
     - "--tool-call-parser=hermes"
 EOF
@@ -331,7 +331,7 @@ For detailed explanation, see: [llm-d Intelligent Routing Verification Guide](..
   - `gpu-kueue-profile` — `scheduling.type: Queue`; requires Kueue and a `LocalQueue` named `default` in the workload namespace.
   - `nvidia-a10g-profile` — `scheduling.type: Node` with `nodeSelector: nvidia.com/gpu.product: NVIDIA-A10G`; use on mixed-GPU clusters to pin to A10G nodes.
 - **Re-applying LLMInferenceService drops unlisted env vars:** `oc apply` uses strategic merge patch — the `env` list is replaced, not merged. Any env var absent from the rendered YAML (including `VLLM_ADDITIONAL_ARGS`) is silently removed. Always pass the per-model values file with `-f` on every `helm template … | oc apply`.
-- **`LLMInferenceService` API version:** The inference chart generates `apiVersion: serving.kserve.io/v1alpha2`. Resources applied with `v1alpha1` will not show the MaaS toggle or other advanced fields in the RHOAI dashboard edit form.
+- **`LLMInferenceService` API version:** The inference chart generates `apiVersion: serving.kserve.io/v1alpha1`. In RHOAI 3.4, the chart used `v1alpha2`; RHOAI 3.5 reverts to `v1alpha1`. If you have existing resources at `v1alpha2`, re-apply them with the updated chart.
 - **GPU update strategy — not configurable via CRD:** The scheduler Deployment is always `Recreate`; the main workload is always `RollingUpdate`. The `updateStrategy` value in the inference chart is silently dropped by the API server.
 - **`maas.enabled` in per-model values files:** Set `maas.enabled: false` when deploying in Phase 5 (llm-d only). Setting it `true` before the MaaS gateway and Kuadrant policies are in place (Phase 6) triggers reconcile errors in the maas-controller and does not enable MaaS. Flip it to `true` only during Phase 6 when publishing the model to MaaS.
 - For OCI model images (`registry.redhat.io/rhelai1/...`), ensure the cluster pull secret includes Red Hat registry credentials.
@@ -339,6 +339,10 @@ For detailed explanation, see: [llm-d Intelligent Routing Verification Guide](..
 - **Model Registry / model-catalog API 500:** If migrations did not apply, restart model-catalog: `oc rollout restart deployment/model-catalog -n rhoai-model-registries` (README Appendix B).
 - **Duplicate `VLLM_ADDITIONAL_ARGS` env var:** The inference chart auto-generates `VLLM_ADDITIONAL_ARGS` from `vllm.extraArgs`. Setting it again via `env` causes a duplicate-env admission error. Always use `vllm.extraArgs` in per-model values files instead of `env: [{name: VLLM_ADDITIONAL_ARGS, ...}]`.
 - **Perses dashboards not visible in the console:** Three requirements must all be met: (1) a `UIPlugin` CR of type `Dashboards` must exist, (2) a `UIPlugin` CR of type `Monitoring` with `monitoring.perses.enabled: true` must exist, and (3) `PersesDashboard` CRs must be in the `openshift-cluster-observability-operator` namespace with label `app.kubernetes.io/part-of: monitoring`. Missing any one causes the dashboards to silently not appear.
+- **RHOAI 3.5 breaking change -- API group rename:** The API group for `InferenceObjective` and `EndpointPickerConfig` changed from `inference.networking.x-k8s.io` to `llm-d.ai`. Any existing manifests or scripts referencing the old group must be updated. The CRDs are served under the new group only; applying resources with the old `apiVersion` will fail.
+- **RHOAI 3.5 change -- `saturationDetector` field relocation:** The `saturationDetector` field moved from a top-level field to `flowControl.saturationDetector` and now uses a plugin-reference pattern. Update any custom `EndpointPickerConfig` manifests accordingly.
+- **RHOAI 3.5 change -- EPP scheduler scorers:** The default EPP scheduler now includes two additional scorers: `kv-cache-utilization-scorer` and `no-hit-lru-scorer`, alongside the existing `queue-scorer` and `prefix-cache-scorer`. These improve routing decisions based on KV cache utilization and LRU eviction patterns. No action required unless you use a custom scorer configuration.
+- **RHOAI 3.5 change -- vLLM access-log flag:** The `--disable-uvicorn-access-log` flag changed to `--disable-access-log-for-endpoints /health,/metrics,/ping`. The old flag is no longer recognized by vLLM. Update any per-model values files that reference the old flag.
 
 ---
 

@@ -31,8 +31,10 @@ spec:
       defaultClusterQueueName: default
       defaultLocalQueueName: default
       managementState: {{ if (.Values.kueue | default false) }}Unmanaged{{ else }}Removed{{ end }}
-    llamastackoperator:
-      managementState: {{ if (.Values.llamaStack | default false) }}Managed{{ else }}Removed{{ end }}
+    ogx:
+      managementState: {{ if (.Values.ogx | default false) }}Managed{{ else }}Removed{{ end }}
+    mcplifecycleoperator:
+      managementState: Removed
     modelregistry:
       managementState: {{ if (.Values.modelRegistry | default false) }}Managed{{ else }}Removed{{ end }}
       registriesNamespace: {{ .Values.dsc.modelRegistryNamespace | default "rhoai-model-registries" }}
@@ -43,6 +45,8 @@ spec:
     workbenches:
       workbenchNamespace: {{ .Values.dsc.workbenchNamespace | default "rhods-notebooks" }}
       managementState: Managed
+    trainer:
+      managementState: Removed
     trainingoperator:
       managementState: Managed
     trustyai:

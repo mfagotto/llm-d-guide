@@ -31,10 +31,10 @@ connectivity-link operator  →  Kuadrant CR (observability enabled, Ready defer
 
 ### Step 1 — Connectivity Link (RHCL operator — Authorino + Limitador + Kuadrant CRDs)
 
-> **RHCL version pinning (RHOAI 3.4):** The RHCL operator subscription in
-> `gitops/operators/connectivity-link` pins to **v1.3.x**. RHCL v1.4.0 has a known Wasm shim bug
-> that breaks Authorino auth calls on MaaS gateways (HTTP 500 `AUTH_FAILURE`). **Do not upgrade
-> to v1.4.0.** This pin should be revisited once RHOAI 3.5 is GA.
+> **RHCL 1.4.x (RHOAI 3.5):** RHCL 1.4.x is required for RHOAI 3.5. The Wasm shim bug
+> that affected v1.4.0 with RHOAI 3.4 has been fixed. The operator subscription in
+> `gitops/operators/connectivity-link` no longer pins to a specific CSV — it tracks the
+> `stable` channel and picks up the latest 1.4.x release automatically.
 
 ```bash
 oc apply -k ./gitops/operators/connectivity-link
@@ -102,7 +102,7 @@ Wait for both CSVs to reach `Succeeded` before proceeding to RHOAI installation.
 
 **Human gate — RHOAI channel:** Before installing, ask the user which OLM profile to use:
 - `stable` — GA release on `stable-3.x` (default)
-- `ea` — Early Access on `beta` channel
+- `ea` — Early Access on `alpha` channel
 
 Verify the `startingCSV` matches the live packagemanifest before applying:
 

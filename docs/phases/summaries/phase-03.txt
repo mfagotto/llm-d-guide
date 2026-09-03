@@ -9,7 +9,7 @@ Time:     ~20-30 min
 Install order (sequence matters):
   1. Connectivity Link → approve InstallPlan → wait CSVs
      → Create Kuadrant CR (Authorino + Limitador)
-     ⚠ RHCL pinned to v1.3.x (v1.4.0 Wasm bug)
+     ℹ RHCL 1.4.x required (Wasm bug fixed; no version pin)
      ⚠ Kuadrant Ready=False is EXPECTED (no GatewayClass yet)
   2. LeaderWorkerSet → wait CRD
   3. Tempo + OpenTelemetry → wait CSVs (BEFORE RHOAI)

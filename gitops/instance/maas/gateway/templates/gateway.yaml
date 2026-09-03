@@ -105,6 +105,7 @@ spec:
             values:
             - {{ .Values.gateway.namespace }}
             - redhat-ods-applications
+            - redhat-ai-gateway-infra
             - models-as-a-service
             {{- range .Values.gateway.modelNamespaces }}
             - {{ . }}
@@ -124,6 +125,7 @@ spec:
             values:
             - {{ .Values.gateway.namespace }}
             - redhat-ods-applications
+            - redhat-ai-gateway-infra
             - models-as-a-service
             {{- range .Values.gateway.modelNamespaces }}
             - {{ . }}

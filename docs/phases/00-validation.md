@@ -14,7 +14,7 @@
 If any check fails, use these individual commands to diagnose:
 
 ```bash
-# OCP version — must be 4.19+ (llm-d requires 4.20+; tested on 4.21)
+# OCP version — RHOAI 3.5 supports 4.19–4.20 (llm-d requires 4.20+)
 oc version
 
 # Cluster admin access

@@ -21,7 +21,7 @@ oc get pods -n kuadrant-system
 oc get llminferenceservice -A
 
 # maas-api pod running
-oc get pods -n redhat-ods-applications -l app.kubernetes.io/name=maas-api
+oc get pods -n redhat-ai-gateway-infra -l app.kubernetes.io/name=maas-api
 ```
 
 **Steps (follow README §9.2):**
@@ -48,11 +48,11 @@ Deploy PostgreSQL and create the `maas-db-config` secret **before** enabling `mo
 DB_PASSWORD=$(openssl rand -base64 18 | tr -d '+/=' | head -c 24)
 echo "Save this DB password: ${DB_PASSWORD}"
 helm template gitops/instance/maas/database --name-template maas-database \
-  --namespace redhat-ods-applications \
-  --set db.password="${DB_PASSWORD}" | oc apply -n redhat-ods-applications -f -
+  --namespace redhat-ai-gateway-infra \
+  --set db.password="${DB_PASSWORD}" | oc apply -n redhat-ai-gateway-infra -f -
 oc wait --for=condition=ready pod -l app=maas-db \
-  -n redhat-ods-applications --timeout=120s
-oc get secret maas-db-config -n redhat-ods-applications
+  -n redhat-ai-gateway-infra --timeout=120s
+oc get secret maas-db-config -n redhat-ai-gateway-infra
 ```
 
 ### Step 3 — Enable MaaS in the DataScienceCluster
@@ -61,7 +61,7 @@ Re-apply the RHOAI instance chart with `modelsAsService=true` **after** the gate
 ```bash
 helm template rhoai ./gitops/instance/rhoai --set modelsAsService=true | oc apply -f -
 oc wait --for=condition=ready pod -l app.kubernetes.io/name=maas-api \
-  -n redhat-ods-applications --timeout=120s
+  -n redhat-ai-gateway-infra --timeout=120s
 ```
 
 ### Step 4 — Authorino TLS
@@ -156,6 +156,11 @@ oc get envoyfilter maas-default-gateway-authn-ssl -n openshift-ingress
 ### Step 5 — Bootstrap subscription namespace
 
 `models-as-a-service` namespace + `default-tenant` CR (name is exact):
+
+> **RHOAI 3.5 deprecation notice:** The `Tenant` CR is deprecated in RHOAI 3.5 and will be replaced
+> by `AITenant` + `MaasTenantConfig` in a future release. The `Tenant` CR still works in 3.5 and
+> these instructions remain valid, but plan to migrate to the new CRs when they become available.
+
 ```bash
 # Create namespace
 oc create namespace models-as-a-service --dry-run=client -o yaml | oc apply -f -
@@ -184,10 +189,10 @@ EOF
 **Verify maas-api is reading the database secret:**
 ```bash
 oc wait --for=condition=available deployment/maas-api \
-  -n redhat-ods-applications --timeout=120s
+  -n redhat-ai-gateway-infra --timeout=120s
 ```
 
-> RHOAI wires `DB_CONNECTION_URL` from the `maas-db-config` secret automatically when it creates the `maas-api` deployment. No manual patching is needed. If `modelsAsService` was already `Managed` before the secret existed (wrong order), run `oc rollout restart deployment/maas-api -n redhat-ods-applications` — do not patch the deployment, as RHOAI's reconciliation loop will overwrite any manual env var changes.
+> RHOAI wires `DB_CONNECTION_URL` from the `maas-db-config` secret automatically when it creates the `maas-api` deployment. No manual patching is needed. If `modelsAsService` was already `Managed` before the secret existed (wrong order), run `oc rollout restart deployment/maas-api -n redhat-ai-gateway-infra` — do not patch the deployment, as RHOAI's reconciliation loop will overwrite any manual env var changes.
 
 ### Step 6 — Deploy or publish a model for MaaS
 
@@ -312,6 +317,12 @@ curl -sk -X POST "https://${MAAS_GW}/maas-api/v1/api-keys" \
 
 **Human gate:** API key creation returns HTTP 201 with a `sk-oai-*` key. Model call with that key returns HTTP 200.
 
+> **RHOAI 3.5 — body-based model routing:** RHOAI 3.5 supports OpenAI-compatible body-based model
+> routing. Requests to `/v1/chat/completions` with the model name in the JSON request body
+> (the standard `"model": "<model-name>"` field) are now routed correctly without needing a
+> model-specific path prefix. This means standard OpenAI client libraries work out of the box
+> against the MaaS gateway endpoint.
+
 ---
 
 ## Known gotchas
@@ -331,7 +342,7 @@ curl -sk -X POST "https://${MAAS_GW}/maas-api/v1/api-keys" \
 - Gen AI studio → API keys or Settings → Authorization policies tabs missing in the dashboard: check all MaaS `OdhDashboardConfig` flags (`genAiStudio`, `modelAsService`, `maasAuthPolicies`, `vLLMDeploymentOnMaaS`) — `vLLMDeploymentOnMaaS` is the most commonly missing one.
 - `LLMInferenceService` `HTTPRoutesReady: False` — `NotAllowedByListeners`: model namespace not in `gateway.modelNamespaces`. Re-apply the gateway chart with the correct namespace set.
 - `MaaSAuthPolicy` status loop in controller logs (`"failed to update MaaSAuthPolicy status"`) — harmless controller/CRD version mismatch. Auth and rate limiting work correctly despite this.
-- **EA2 → stable 3.4 migration only:** If `maas-controller` or `maas-api` Deployment shows an immutable selector error in the DSC, delete both Deployments and force a DSC reconcile.
+- **EA2 → stable migration (3.4/3.5):** If `maas-controller` or `maas-api` Deployment shows an immutable selector error in the DSC, delete both Deployments and force a DSC reconcile. When upgrading from 3.4 to 3.5, note that the MaaS infrastructure namespace changed from `redhat-ods-applications` to `redhat-ai-gateway-infra` -- stale Deployments in the old namespace should be cleaned up manually.
 
 For more MaaS troubleshooting, see: [MaaS Troubleshooting Reference](../reference/maas-troubleshooting.md)
 

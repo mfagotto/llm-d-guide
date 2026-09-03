@@ -7,6 +7,12 @@
 
 OpenShift's built-in User Workload Monitoring (Prometheus + Thanos) already scrapes vLLM and KServe metrics once UWM is enabled. This phase layers the **Cluster Observability Operator (COO)** on top, which adds Perses dashboard support to the OCP console's **Observe → Dashboards** view — no separate Grafana instance required.
 
+> **RHOAI 3.5 changes in this phase:**
+>
+> - **COO version pin removed.** RHOAI 3.4.1 required pinning COO to v1.4.0 because the Perses image did not support newer CLI flags. The Perses image shipped with RHOAI 3.5 is compatible with current COO versions, so the pin is no longer needed.
+> - **Observability dashboards auto-installed.** When llm-d is deployed, the operator now auto-creates dashboard ConfigMap objects. Step 5 (manual dashboard deployment) is only needed for custom dashboards or if the auto-created ones need to be overridden.
+> - **EPP metrics prefix changed.** The Endpoint Picker metrics prefix changed from `inference_extension_` to `llm_d_epp_`. Any custom Prometheus queries or alerting rules referencing the old prefix must be updated (e.g., `inference_extension_request_duration_seconds` is now `llm_d_epp_request_duration_seconds`).
+
 ### Step 1 — Enable User Workload Monitoring (MANDATORY)
 
 ```bash
@@ -27,12 +33,12 @@ oc get pods -n openshift-user-workload-monitoring -w
 
 ### Step 2 — Install Cluster Observability Operator
 
-**Important:** The operator is pinned to version 1.4.0 for compatibility with RHOAI 3.4.1. COO 1.5.0 introduces CLI flags that the perses image shipped with RHOAI 3.4.1 does not support, causing the `data-science-perses` pod to crash-loop and breaking the RHOAI dashboard monitoring drawer.
+**Note:** In RHOAI 3.4.1 the operator was pinned to COO v1.4.0 because the Perses image did not support newer CLI flags. This pin is removed for RHOAI 3.5 — the updated Perses image supports current COO versions. Install the latest available version from the channel.
 
 ```bash
 oc apply -k gitops/operators/cluster-observability-operator
 
-# The InstallPlan uses Manual approval — approve it automatically (version is pinned):
+# The InstallPlan uses Manual approval — approve it:
 IP=$(oc get installplan -n openshift-cluster-observability-operator \
   -o jsonpath='{.items[?(@.spec.approved==false)].metadata.name}')
 [[ -n "$IP" ]] && oc patch installplan "$IP" -n openshift-cluster-observability-operator \
@@ -44,9 +50,9 @@ oc wait --for=jsonpath='{.status.phase}'=Succeeded csv \
   -l operators.coreos.com/cluster-observability-operator.openshift-cluster-observability-operator= \
   --timeout=300s
 
-# Verify COO 1.4.0 is installed
+# Verify COO is installed
 oc get csv -n openshift-cluster-observability-operator | grep cluster-observability
-# Expected: cluster-observability-operator.v1.4.0   Succeeded
+# Expected: cluster-observability-operator.v<version>   Succeeded
 ```
 
 ### Step 3 — Enable Perses dashboards in the OpenShift console
@@ -101,7 +107,15 @@ oc get servicemonitor nvidia-dcgm-exporter -n nvidia-gpu-operator
 
 ### Step 5 — Deploy Perses dashboard
 
+> **RHOAI 3.5:** Observability dashboards are now auto-installed when llm-d is deployed — the
+> operator creates dashboard ConfigMap objects automatically. This manual step is only needed
+> if you want to deploy a custom dashboard or override the auto-created ones.
+
 ```bash
+# Check whether dashboards were auto-created before applying manually:
+oc get persesdashboard -n openshift-cluster-observability-operator
+
+# If no dashboards exist, apply the bundled one:
 oc apply -f gitops/instance/llm-d-observability/perses-dashboard-intelligent-inference.yaml
 ```
 

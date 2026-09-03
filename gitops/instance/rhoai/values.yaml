@@ -17,7 +17,7 @@ featureStore: false         # Feast operator
 modelsAsService: false     # KServe models-as-service — enable in Phase 5 (MaaS), not here
 distributedWorkloads: false # Distributed workloads
 kueue: false                 # Kueue operator
-llamaStack: true            # LlamaStack operator
+ogx: true                    # OGX operator (replaces LlamaStack in RHOAI 3.5)
 modelRegistry: true         # Model registry + dashboard menu
 mlflow: true                # MLflow operator + MLflow instance CR
 trustyai: false             # TrustyAI

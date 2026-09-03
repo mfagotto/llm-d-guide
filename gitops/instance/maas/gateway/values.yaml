@@ -18,7 +18,8 @@ gateway:
   # LoadBalancer: for clusters with a cloud LB controller (AWS, GCP, Azure).
   serviceType: ClusterIP
   # Extra namespaces whose HTTPRoutes the Gateway will accept.
-  # redhat-ods-applications and models-as-a-service are always included.
+  # redhat-ods-applications, redhat-ai-gateway-infra, and models-as-a-service
+  # are always included.
   modelNamespaces: []
 
 # true  → expose via an OpenShift Route fronting the ClusterIP Gateway service.

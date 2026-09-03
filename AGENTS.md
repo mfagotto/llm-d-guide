@@ -1,8 +1,8 @@
 # AGENTS.md — llm-d-guide Co-pilot Runbook
 
 This file gives assistants (Claude Code, OpenCode, Cursor, and compatible tools) persistent
-context for installing **Red Hat OpenShift AI 3.4** (self-managed) with **llm-d** on
-**OpenShift Container Platform 4.19+** (llm-d requires 4.20+; tested on 4.21). The canonical, step-by-step manual is [`README.md`](README.md);
+context for installing **Red Hat OpenShift AI 3.5** (self-managed) with **llm-d** on
+**OpenShift Container Platform 4.19–4.20** (llm-d requires 4.20+). The canonical, step-by-step manual is [`README.md`](README.md);
 use this runbook for phased execution, wait conditions, and human gates. Work through one phase
 per session. Always tell the assistant which phase you are on and paste any relevant error output
 before asking for help.
@@ -47,7 +47,7 @@ troubleshooting) is in [`docs/reference/`](docs/reference/).
 | `TLS_ISSUER` | TLS certificate issuer: `letsencrypt` (Route53 DNS-01, requires AWS + public DNS) or `local-ca` (local CA chain via cert-manager, works on any platform). **Must be confirmed before Phase 1.** | `letsencrypt` | Phase 1 |
 | `AWS_INSTANCE_TYPE` | GPU instance type | `g5.2xlarge` | Phase 2 |
 | `AWS_INSTANCES_PER_AZ` | GPU nodes per availability zone | `1` | Phase 2 |
-| `RHOAI_OLM_PROFILE` | RHOAI **operator** install preset: `stable` (default) = `stable-3.x`; `ea` = `beta` channel. Verify current CSV via `packagemanifest` before use. Passed to `helm template ./gitops/operators/rhoai --set olmProfile=...` | `stable` | Phase 3 |
+| `RHOAI_OLM_PROFILE` | RHOAI **operator** install preset: `stable` (default) = `stable-3.x`; `ea` = `alpha` channel (the `beta` channel is legacy — do not use). Verify current CSV via `packagemanifest` before use. Passed to `helm template ./gitops/operators/rhoai --set olmProfile=...` | `stable` | Phase 3 |
 | `HF_TOKEN` | HuggingFace token for gated models | `hf_...` | Phase 5 |
 | `GATEWAY_NAME` | Name for the llm-d gateway | `openshift-ai-inference` | Phase 5, 6 |
 | `PROJECT` | Namespace for llm-d workloads | `llm-d-demo` | Phase 5, 6 |
@@ -77,7 +77,7 @@ troubleshooting) is in [`docs/reference/`](docs/reference/).
 ## Phase Summaries
 
 ### Phase 0 — Cluster Validation
-Confirm the cluster is ready: OCP 4.19+ (llm-d requires 4.20+; tested on 4.21), cluster admin access, default StorageClass, no ODH or Service Mesh 2.x.
+Confirm the cluster is ready: OCP 4.19–4.20 (llm-d requires 4.20+), cluster admin access, default StorageClass, no ODH or Service Mesh 2.x. On OCP 4.21+, disable the OLMv1 catalog before installing NFD or NVIDIA GPU operators (it redirects to `ClusterExtensions` instead of the standard installation form).
 **Critical:** Derive auto-derived variables from the cluster (see table above). Ask the user whether their infrastructure is running on AWS. Then ask whether they want Let's Encrypt or a local CA for TLS (see `TLS_ISSUER` in the Environment Variables table). If on AWS, also ask for `AWS_INSTANCE_TYPE`.
 **Full guide:** [docs/phases/00-validation.md](docs/phases/00-validation.md)
 
@@ -96,14 +96,14 @@ Add GPU worker nodes and install hardware detection and driver stack.
 **Full guide:** [docs/phases/02-gpu-nodes.md](docs/phases/02-gpu-nodes.md)
 
 ### Phase 3 — Core Operators + RHOAI
-Install Connectivity Link, LeaderWorkerSet, **monitoring operators (Tempo, OpenTelemetry)**, and RHOAI, then configure the DataScienceCluster.
+Install Connectivity Link (RHCL 1.4.x), LeaderWorkerSet, **monitoring operators (Tempo, OpenTelemetry)**, and RHOAI, then configure the DataScienceCluster.
 **Critical:** 
 - **Operator install order matters:** Connectivity Link → LeaderWorkerSet → **Tempo + OpenTelemetry (BEFORE RHOAI)** → RHOAI Operator → RHOAI Instance. The monitoring operators must be installed BEFORE RHOAI because the DSCInitialization requires them for monitoring stack initialization.
 - Enable Kuadrant observability (`spec.observability.enable: true`) when creating the Kuadrant CR — required for the monitoring stack in Phase 4.
 - Do NOT install Kueue unless explicitly required. 
 - `modelsAsService` must be `false` during this phase. 
 - Apply connectivity-link first — Authorino must be running before RHOAI.
-**RHCL version pinning:** Pin RHCL to v1.3.x — v1.4.0 has a Wasm shim bug that breaks MaaS auth. Revisit when RHOAI 3.5 is GA.
+- The DSC spec in RHOAI 3.5 replaces `llamastackoperator` with `ogx`, and adds `trainer` and `mcplifecycleoperator` components.
 **Kuadrant `Ready: False` after creating the CR** — this is **expected** at this phase. The operator requires a `GatewayClass` to report `Ready: True`, but the GatewayClass is created in Phase 5. Verify Authorino and Limitador pods are running in `kuadrant-system` — that confirms the operator is functional. Kuadrant becomes `Ready` in Phase 5 after the gateway is deployed and the operator pod is restarted. Do not search the marketplace or install any gateway operator.
 **Full guide:** [docs/phases/03-operators-rhoai.md](docs/phases/03-operators-rhoai.md)
 
@@ -112,6 +112,8 @@ Install COO for llm-d metrics dashboards. Enable User Workload Monitoring.
 **Critical:**
 - After installing COO, create **two UIPlugin CRs** (`Dashboards` and `Monitoring` with `perses.enabled: true`) — without these the Perses tab does not appear in the console.
 - PersesDashboard CRs must be in the `openshift-cluster-observability-operator` namespace with label `app.kubernetes.io/part-of: monitoring` — the Monitoring UIPlugin only discovers dashboards matching these criteria.
+- **RHOAI 3.5 change:** Observability dashboards are now installed by default when llm-d is deployed (dashboard ConfigMap objects are auto-created). Custom Perses dashboards remain useful for advanced/custom views.
+- **RHOAI 3.5 change:** The EPP metrics prefix changed from `inference_extension_` to `llm_d_epp_`. Update any custom Prometheus dashboards, alerts, or Grafana panels that reference the old prefix.
 - Use `vllm.extraArgs` in per-model values files, **not** `env` with `VLLM_ADDITIONAL_ARGS` — the chart auto-generates that env var from `vllm.extraArgs`; setting both causes a duplicate-env rejection.
 **Full guide:** [docs/phases/04-monitoring.md](docs/phases/04-monitoring.md)
 
@@ -121,12 +123,17 @@ Deploy the gateway, a namespace, and an LLMInferenceService, then test the endpo
 - Set `maas.enabled: false` when deploying in Phase 5.
 - Use `vllm.extraArgs` (not `env` with `VLLM_ADDITIONAL_ARGS`) in per-model values — the chart auto-generates that env var and duplicates cause admission errors.
 - The default hardware profile is `gpu-profile` (auto-selected when `gpuCount > 0`). Set it explicitly in the per-model values file for clarity.
+- **RHOAI 3.5 breaking change:** The API group for `InferenceObjective` and `EndpointPickerConfig` changed from `inference.networking.x-k8s.io` to `llm-d.ai`. The `saturationDetector` field moved to `flowControl.saturationDetector` with a plugin-reference pattern.
+- **RHOAI 3.5 change:** The default EPP scheduler adds two new scorers: `kv-cache-utilization-scorer` and `no-hit-lru-scorer` alongside `queue-scorer` and `prefix-cache-scorer`.
+- **RHOAI 3.5 change:** vLLM access-log flag changed from `--disable-uvicorn-access-log` to `--disable-access-log-for-endpoints /health,/metrics,/ping`.
 - Verify intelligent routing and monitoring integration after deployment.
 **Full guide:** [docs/phases/05-llmd-quickstart.md](docs/phases/05-llmd-quickstart.md)
 
 ### Phase 6 — MaaS
 Deploy the MaaS gateway, configure Authorino TLS, bootstrap the subscription stack, and verify API key creation.
 **Critical:** Order matters: gateway → database → enable `modelsAsService=true` → Authorino TLS. Without Authorino TLS, the API key endpoint returns 500.
+**RHOAI 3.5 change:** The default MaaS infrastructure namespace is now `redhat-ai-gateway-infra` (was `redhat-ods-applications` in 3.4). The `maas-db-config` secret and `maas-api` deployment live in this namespace. The `Tenant` CR is deprecated — replaced by `AITenant` + `MaasTenantConfig`.
+**RHOAI 3.5 change:** MaaS now supports OpenAI-compatible body-based model routing (`/v1/chat/completions` with model name in the request body).
 **Authorino TLS race condition:** The `odh-model-controller`'s `gateway-auth-bootstrap` controller does a one-shot check when it sees the gateway annotation — if Authorino TLS is not fully active at that moment, it skips EnvoyFilter creation and never retries. Steps 4a–4c must be verified before applying 4d. If the EnvoyFilter is missing after 4d, restart `odh-model-controller`.
 **Full guide:** [docs/phases/06-maas.md](docs/phases/06-maas.md)
 
