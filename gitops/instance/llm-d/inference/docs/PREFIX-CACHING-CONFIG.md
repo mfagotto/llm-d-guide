@@ -49,14 +49,14 @@ vllmAdditionalArgs: "--enable-prefix-caching"
 ### Option 1: Per-model values file
 ```yaml
 # my-model-values.yaml
-vllmAdditionalArgs: "--disable-uvicorn-access-log"  # omit --enable-prefix-caching
+vllmAdditionalArgs: "--disable-access-log-for-endpoints=/health,/metrics,/ping"  # omit --enable-prefix-caching
 ```
 
 ### Option 2: Helm CLI override
 ```bash
 helm template my-model ./gitops/instance/llm-d/inference \
   -f my-model-values.yaml \
-  --set vllmAdditionalArgs="--disable-uvicorn-access-log" \
+  --set vllmAdditionalArgs="--disable-access-log-for-endpoints=/health,/metrics,/ping" \
   | oc apply -f -
 ```
 
@@ -68,7 +68,7 @@ helm template my-model ./gitops/instance/llm-d/inference \
 
 ### Example 1: Enable prefix caching + tool calling
 ```yaml
-vllmAdditionalArgs: "--enable-prefix-caching --disable-uvicorn-access-log --enable-auto-tool-choice --tool-call-parser hermes"
+vllmAdditionalArgs: "--enable-prefix-caching --disable-access-log-for-endpoints=/health,/metrics,/ping --enable-auto-tool-choice --tool-call-parser hermes"
 ```
 
 ### Example 2: Enable prefix caching + custom max tokens
@@ -79,7 +79,7 @@ vllmAdditionalArgs: "--enable-prefix-caching --max-model-len 8192"
 ### Example 3: Disable prefix caching but keep other flags
 ```yaml
 # Omit --enable-prefix-caching from the string
-vllmAdditionalArgs: "--disable-uvicorn-access-log --enable-auto-tool-choice"
+vllmAdditionalArgs: "--disable-access-log-for-endpoints=/health,/metrics,/ping --enable-auto-tool-choice"
 ```
 
 ---
@@ -147,10 +147,10 @@ TTFT P95:               250-300ms (all prompts computed from scratch)
 
 ```yaml
 # Before
-vllmAdditionalArgs: "--disable-uvicorn-access-log"
+vllmAdditionalArgs: "--disable-access-log-for-endpoints=/health,/metrics,/ping"
 
 # After
-vllmAdditionalArgs: "--enable-prefix-caching --disable-uvicorn-access-log"
+vllmAdditionalArgs: "--enable-prefix-caching --disable-access-log-for-endpoints=/health,/metrics,/ping"
 ```
 
 ### 2. Re-deploy
@@ -250,7 +250,7 @@ deploymentType: intelligent-inference
 serviceName: my-model
 model:
   name: my-org/my-model
-vllmAdditionalArgs: "--enable-prefix-caching --disable-uvicorn-access-log"
+vllmAdditionalArgs: "--enable-prefix-caching --disable-access-log-for-endpoints=/health,/metrics,/ping"
 ```
 
 **Result:** Prefix caching enabled, cache hit rate visible in dashboard
@@ -263,7 +263,7 @@ deploymentType: intelligent-inference
 serviceName: unique-model
 model:
   name: my-org/unique-model
-vllmAdditionalArgs: "--disable-uvicorn-access-log"  # no --enable-prefix-caching
+vllmAdditionalArgs: "--disable-access-log-for-endpoints=/health,/metrics,/ping"  # no --enable-prefix-caching
 ```
 
 **Result:** No prefix caching, 0% cache hit rate (expected)
@@ -276,7 +276,7 @@ helm template my-model ./inference -f my-model-values.yaml | oc apply -f -
 
 # Disable for specific deployment (override at deploy time)
 helm template my-model ./inference -f my-model-values.yaml \
-  --set vllmAdditionalArgs="--disable-uvicorn-access-log" \
+  --set vllmAdditionalArgs="--disable-access-log-for-endpoints=/health,/metrics,/ping" \
   | oc apply -f -
 ```
 
@@ -313,7 +313,7 @@ helm template my-model ./inference -f my-model-values.yaml \
 
 **Solution:** Disable prefix caching for that specific model:
 ```yaml
-vllmAdditionalArgs: "--disable-uvicorn-access-log"  # omit --enable-prefix-caching
+vllmAdditionalArgs: "--disable-access-log-for-endpoints=/health,/metrics,/ping"  # omit --enable-prefix-caching
 ```
 
 ---

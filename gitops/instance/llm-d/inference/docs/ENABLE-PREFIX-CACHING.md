@@ -22,7 +22,7 @@ vllmAdditionalArgs: "--enable-prefix-caching"
 vllm serve /mnt/models \
   --served-model-name alibaba/qwen3-8b \
   --port 8000 \
-  --disable-uvicorn-access-log \
+  --disable-access-log-for-endpoints=/health,/metrics,/ping \
   --enable-auto-tool-choice \
   --tool-call-parser hermes
   # ↑ Missing: --enable-prefix-caching
@@ -45,12 +45,12 @@ oc exec -n llm-d-demo $POD -c main -- ps aux | grep "vllm serve"
 
 **Current:**
 ```yaml
-vllmAdditionalArgs: "--disable-uvicorn-access-log --enable-auto-tool-choice --tool-call-parser hermes"
+vllmAdditionalArgs: "--disable-access-log-for-endpoints=/health,/metrics,/ping --enable-auto-tool-choice --tool-call-parser hermes"
 ```
 
 **Updated:**
 ```yaml
-vllmAdditionalArgs: "--enable-prefix-caching --disable-uvicorn-access-log --enable-auto-tool-choice --tool-call-parser hermes"
+vllmAdditionalArgs: "--enable-prefix-caching --disable-access-log-for-endpoints=/health,/metrics,/ping --enable-auto-tool-choice --tool-call-parser hermes"
 ```
 
 ### 2. Re-deploy qwen3-8b

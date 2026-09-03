@@ -25,7 +25,7 @@ vllm:
   prefixCaching:
     enabled: auto  # auto | true | false
   extraArgs:
-    - "--disable-uvicorn-access-log"
+    - "--disable-access-log-for-endpoints=/health,/metrics,/ping"
     - "--enable-auto-tool-choice"
     - "--tool-call-parser=hermes"
 ```
@@ -61,7 +61,7 @@ List of model-specific vLLM flags appended after framework-managed flags.
 ```yaml
 vllm:
   extraArgs:
-    - "--disable-uvicorn-access-log"          # Suppress HTTP request logs
+    - "--disable-access-log-for-endpoints=/health,/metrics,/ping"  # Suppress noisy health/metrics logs
     - "--enable-auto-tool-choice"             # Auto-detect tool calls
     - "--tool-call-parser=hermes"             # Use Hermes tool call format
     - "--max-model-len=8192"                  # Override max context length
@@ -84,10 +84,10 @@ serviceName: my-model
 
 vllm:
   extraArgs:
-    - "--disable-uvicorn-access-log"
+    - "--disable-access-log-for-endpoints=/health,/metrics,/ping"
 ```
 
-**Result:** `VLLM_ADDITIONAL_ARGS="--enable-prefix-caching --disable-uvicorn-access-log"`
+**Result:** `VLLM_ADDITIONAL_ARGS="--enable-prefix-caching --disable-access-log-for-endpoints=/health,/metrics,/ping"`
 
 ### Example 2: Intelligent Inference WITHOUT Prefix Caching (Not Recommended)
 
@@ -100,10 +100,10 @@ vllm:
   prefixCaching:
     enabled: false  # Explicitly disable (not recommended for intelligent-inference)
   extraArgs:
-    - "--disable-uvicorn-access-log"
+    - "--disable-access-log-for-endpoints=/health,/metrics,/ping"
 ```
 
-**Result:** `VLLM_ADDITIONAL_ARGS="--disable-uvicorn-access-log"`
+**Result:** `VLLM_ADDITIONAL_ARGS="--disable-access-log-for-endpoints=/health,/metrics,/ping"`
 
 ⚠️ **Warning:** Disabling prefix caching for intelligent-inference defeats the purpose of the EPP scheduler. Cache hit rate will be 0%.
 
@@ -119,7 +119,7 @@ serviceName: my-model
 
 vllm:
   extraArgs:
-    - "--disable-uvicorn-access-log"
+    - "--disable-access-log-for-endpoints=/health,/metrics,/ping"
 ```
 
 **Result:** No `VLLM_ADDITIONAL_ARGS` for prefix caching (P/D has hardcoded KV transfer config).
@@ -157,7 +157,7 @@ vllm:
   prefixCaching:
     enabled: auto  # Or omit entirely (auto is default)
   extraArgs:
-    - "--disable-uvicorn-access-log"
+    - "--disable-access-log-for-endpoints=/health,/metrics,/ping"
     - "--enable-auto-tool-choice"
     - "--tool-call-parser=hermes"
 ```
@@ -255,12 +255,12 @@ vllm:
   prefixCaching:
     enabled: auto
   extraArgs:
-    - "--disable-uvicorn-access-log"
+    - "--disable-access-log-for-endpoints=/health,/metrics,/ping"
     - "--enable-auto-tool-choice"
     - "--tool-call-parser=hermes"
 ```
 
-**Result:** `VLLM_ADDITIONAL_ARGS="--enable-prefix-caching --disable-uvicorn-access-log --enable-auto-tool-choice --tool-call-parser=hermes"` ✅
+**Result:** `VLLM_ADDITIONAL_ARGS="--enable-prefix-caching --disable-access-log-for-endpoints=/health,/metrics,/ping --enable-auto-tool-choice --tool-call-parser=hermes"` ✅
 
 ### ✅ Test 3: Intelligent Inference with Explicit False
 
@@ -268,10 +268,10 @@ vllm:
 helm template test . \
   --set deploymentType=intelligent-inference \
   --set vllm.prefixCaching.enabled=false \
-  --set-json 'vllm.extraArgs=["--disable-uvicorn-access-log"]'
+  --set-json 'vllm.extraArgs=["--disable-access-log-for-endpoints=/health,/metrics,/ping"]'
 ```
 
-**Result:** `VLLM_ADDITIONAL_ARGS="--disable-uvicorn-access-log"` (no prefix caching) ✅
+**Result:** `VLLM_ADDITIONAL_ARGS="--disable-access-log-for-endpoints=/health,/metrics,/ping"` (no prefix caching) ✅
 
 ---
 
