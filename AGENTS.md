@@ -136,7 +136,7 @@ Deploy the gateway, a namespace, and an LLMInferenceService, then test the endpo
 ### Phase 6 — MaaS
 Deploy the MaaS gateway, configure Authorino TLS, bootstrap the subscription stack, and verify API key creation.
 **Critical:** Order matters: gateway → database → enable `modelsAsService=true` (sets `aigateway.modelsAsAService: Managed` in DSC v2) → Authorino TLS. Without Authorino TLS, the API key endpoint returns 500.
-**RHOAI 3.5 change:** The default MaaS infrastructure namespace is now `redhat-ai-gateway-infra` (was `redhat-ods-applications` in 3.4). The `maas-db-config` secret and `maas-api` deployment live in this namespace. The `Tenant` CR is deprecated — replaced by `AITenant` + `MaasTenantConfig`.
+**RHOAI 3.5 change:** The default MaaS infrastructure namespace is now `redhat-ai-gateway-infra` (was `redhat-ods-applications` in 3.4). The `maas-db-config` secret and `maas-api` deployment live in this namespace. The `Tenant` CR is deprecated — it will be replaced by `AITenant` + `MaasTenantConfig` in a future release (still functional in 3.5).
 **RHOAI 3.5 change:** MaaS now supports OpenAI-compatible body-based model routing (`/v1/chat/completions` with model name in the request body).
 **Authorino TLS race condition:** The `odh-model-controller`'s `gateway-auth-bootstrap` controller does a one-shot check when it sees the gateway annotation — if Authorino TLS is not fully active at that moment, it skips EnvoyFilter creation and never retries. Steps 4a–4c must be verified before applying 4d. If the EnvoyFilter is missing after 4d, restart `odh-model-controller`.
 **Full guide:** [docs/phases/06-maas.md](docs/phases/06-maas.md)

@@ -6,6 +6,13 @@ Goal:     Deploy the gateway, a namespace, and an LLMInferenceService,
           then test the inference endpoint.
 Time:     ~15-20 min
 
+RHOAI 3.5 breaking changes:
+  - EPP API group: inference.networking.x-k8s.io → llm-d.ai
+  - vLLM flag deprecated: --disable-uvicorn-access-log
+    → use --disable-access-log-for-endpoints=/health,/metrics,/ping
+    (old flag still works on vLLM 0.18.0)
+  - New EPP scorers: kv-cache-utilization-scorer, no-hit-lru-scorer
+
 Pre-flight:
   - GPU nodes must show nvidia.com/gpu capacity
   - LLMInferenceService + LeaderWorkerSet CRDs available

@@ -1,8 +1,8 @@
-# Red Hat OpenShift AI 3.4 — Installation Manual
+# Red Hat OpenShift AI 3.5 — Installation Manual
 
-**Version:** 3.4 Self-Managed  
-**Target Platform:** OpenShift Container Platform 4.19+ (llm-d requires 4.20+; tested on 4.21)  
-**Date:** May 2026  
+**Version:** 3.5 Self-Managed  
+**Target Platform:** OpenShift Container Platform 4.20+ (llm-d requires 4.20+; tested on 4.21)  
+**Date:** September 2026  
 **Classification:** Internal / Operations
 
 ---
@@ -33,7 +33,7 @@
 
 ## 1. Overview
 
-Red Hat OpenShift AI (RHOAI) 3.4 is a self-managed AI/ML platform that provides an integrated environment for developing, training, serving, and monitoring models across hybrid cloud environments. This manual covers a full installation plan organized into two tiers.
+Red Hat OpenShift AI (RHOAI) 3.5 is a self-managed AI/ML platform that provides an integrated environment for developing, training, serving, and monitoring models across hybrid cloud environments. This manual covers a full installation plan organized into two tiers.
 
 **RHOAI Basic Features:**
 
@@ -48,20 +48,20 @@ Red Hat OpenShift AI (RHOAI) 3.4 is a self-managed AI/ML platform that provides 
 
 **Additional Features:**
 
-* Distributed Inference with llm-d — GA in RHOAI 3.4 (disaggregated prefill/decode, Inference Gateway, KV-cache-aware routing). **Requires OCP 4.20 or later.**
-* Model as a Service — MaaS (governed, rate-limited LLM access via Gateway API and Connectivity Link)
-* Llama Stack Operator (OpenAI-compatible RAG APIs and agentic AI) — *documentation in progress*
+* Distributed Inference with llm-d — GA in RHOAI 3.5 (disaggregated prefill/decode, Inference Gateway, KV-cache-aware routing). **Requires OCP 4.20 or later.**
+* Model as a Service — MaaS (governed, rate-limited LLM access via AI Gateway and Connectivity Link)
+* OGX (OpenAI-compatible RAG APIs and agentic AI, replaces Llama Stack Operator)
 
 **Cross-Cutting Concerns:**
 
 * OpenTelemetry observability (traces, metrics, and logs for RHOAI and model serving components)
 * TLS certificate management (via cert-manager Operator or manual certificate generation)
 
-> **Important:** There is no upgrade path from OpenShift AI 2.x to 3.4. This version requires a fresh installation. RHOAI 3.4 supports OCP 4.19+; distributed inference with llm-d requires OCP 4.20+. This guide has been tested on OCP 4.21.
+> **Important:** There is no upgrade path from OpenShift AI 2.x to 3.5. This version requires a fresh installation. RHOAI 3.5 supports OCP 4.20+; distributed inference with llm-d requires OCP 4.20+. This guide has been tested on OCP 4.21. For upgrading from RHOAI 3.4, see [Migration 3.4 to 3.5](docs/reference/migration-3.4-to-3.5.md).
 
 **Official Documentation:**
 
-* [RHOAI 3.4 Product Documentation](https://docs.redhat.com/en/documentation/red_hat_openshift_ai_self-managed/3.4)
+* [RHOAI 3.5 Product Documentation](https://docs.redhat.com/en/documentation/red_hat_openshift_ai_self-managed/3.5)
 * [Supported Configurations for 3.x](https://access.redhat.com/articles/rhoai-supported-configs-3.x)
 * [Supported Product and Hardware Configurations](https://docs.redhat.com/en/documentation/red_hat_ai/3/html/supported_product_and_hardware_configurations/index)
 * [llm-d Release Component Versions](https://access.redhat.com/articles/7136620)
@@ -118,7 +118,7 @@ Paste the failing command and its output into the chat and say which phase you w
 
 | Requirement | Specification |
 | --- | --- |
-| OpenShift Container Platform | **4.19+** (llm-d requires 4.20+; this guide tested on 4.21) |
+| OpenShift Container Platform | **4.20+** (this guide tested on 4.21) |
 | Worker nodes (base) | Minimum 2 nodes, 8 vCPU / 32 GiB RAM each |
 | Single-node OpenShift | 32 vCPU / 128 GiB RAM |
 | GPU nodes (model serving, llm-d) | NVIDIA A100 / H100 / H200 / A10G / L40S or AMD MI250+ |
@@ -154,30 +154,30 @@ The **Red Hat OpenShift AI operator** is installed from OperatorHub via a Subscr
 
 | Goal | OLM channel | Example `startingCSV` |
 | --- | --- | --- |
-| GA stable 3.4 (default for this guide) | `stable-3.x` | `rhods-operator.3.4.0` |
-| 3.4 early access | `beta` | `rhods-operator.3.4.ea2` |
+| GA stable 3.5 (default for this guide) | `stable-3.x` | `rhods-operator.3.5.0` |
+| 3.5 early access | `alpha` | `rhods-operator.3.5.ea1` |
 
-Early access builds are published on the **beta** channel; GA releases use **stable-3.x**. Pin the CSV you want with `startingCSV` so upgrades are predictable.
+Early access builds are published on the **alpha** channel (the `beta` channel is legacy — do not use); GA releases use **stable-3.x**. Pin the CSV you want with `startingCSV` so upgrades are predictable.
 
 Set **`RHOAI_OLM_PROFILE`** when rendering the operator chart (defaults to stable if unset):
 
 | `RHOAI_OLM_PROFILE` | Effect |
 | --- | --- |
-| `stable` (default) | `channel: stable-3.x`, `startingCSV: rhods-operator.3.4.0` |
-| `ea` | `channel: beta`, `startingCSV: rhods-operator.3.4.ea2` |
+| `stable` (default) | `channel: stable-3.x`, `startingCSV: rhods-operator.3.5.0` |
+| `ea` | `channel: alpha`, `startingCSV: rhods-operator.3.5.ea1` |
 
 You can instead edit `gitops/operators/rhoai/values.yaml` (`olmProfile` or explicit `channel` / `startingCSV`) or pass `--set olmProfile=ea` to `helm template`.
 
 ### 2.6 OLMv1 on OCP 4.21+ (ClusterExtension)
 
-OCP 4.21 introduces **OLMv1** as the default operator management system. The classic OLMv0 flow (`Subscription` + `InstallPlan` + `CSV`) still works but is deprecated. This guide supports both:
+OCP 4.21 introduces **OLMv1** as the default operator management system. The classic OLMv0 flow (`Subscription` + `InstallPlan` + `CSV`) remains fully supported throughout the OCP 4 lifecycle. This guide supports both:
 
 | OCP version | Install method | Operator file | Helm flag |
 |---|---|---|---|
 | 4.20 | OLMv0 (`Subscription`) | `operator.yaml` | *(default)* |
 | 4.21+ | OLMv1 (`ClusterExtension`) | `cluster-extension.yaml` | `--set olmVersion=v1` |
 
-OLMv1 replaces four OLMv0 resources with a single `ClusterExtension` CR. It requires a pre-created `ServiceAccount` with explicit RBAC (OLMv0 auto-grants permissions; OLMv1 does not). Each operator directory ships both files; the `install.sh` scripts for NFD and NVIDIA auto-detect the OCP version.
+OLMv1 replaces four OLMv0 resources with a single `ClusterExtension` CR. It requires a pre-created `ServiceAccount` with explicit RBAC (OLMv0 auto-grants permissions; OLMv1 does not). Each operator directory ships both files. **Note:** Five operators must use OLMv0 regardless of OCP version — NFD, NVIDIA, LeaderWorkerSet (bundles don't support AllNamespaces), and Tempo, OpenTelemetry (RHOAI detects via CSV only).
 
 Detect which path to use:
 
@@ -192,7 +192,7 @@ For the full details — CRD anatomy, RBAC requirements, catalog mapping, wait c
 
 ## 3. Prerequisite Operators
 
-RHOAI 3.4 requires several operators installed **before** creating the DataScienceCluster. Install them via **Operators → OperatorHub** in the web console or via CLI Subscription objects.
+RHOAI 3.5 requires several operators installed **before** creating the DataScienceCluster. Install them via **Operators → OperatorHub** in the web console or via CLI Subscription objects.
 
 > **Step-by-step CLI commands** for each section are in the phase guides:
 > - [Phase 1 — TLS Certificate Automation](docs/phases/01-tls-cert-automation.md)
@@ -319,7 +319,7 @@ done
 
 # Quick Start Guide to Deploy llm-d
 
-Deploy llm-d on a connected OpenShift 4.21 cluster with RHOAI 3.4.
+Deploy llm-d on a connected OpenShift 4.21 cluster with RHOAI 3.5.
 
 > **Prerequisites:** Complete all steps in Section 3 before proceeding. In particular, confirm that the `LLMInferenceService` CRD is available (`oc get crd llminferenceservices.serving.kserve.io`) and that both `odh-model-controller` and `kserve-controller-manager` pods are Running in `redhat-ods-applications`.
 
@@ -435,7 +435,7 @@ oc delete llminferenceservice qwen3-8b -n ${PROJECT}
 
 ## 9. Model as a Service (MaaS)
 
-> **Technology Preview:** MaaS is a Technology Preview feature in RHOAI 3.4 and is not supported under production SLAs.
+> **Technology Preview:** MaaS is a Technology Preview feature in RHOAI 3.5 and is not supported under production SLAs.
 
 > **Self-signed certificates:** If your cluster uses self-signed TLS (no public CA), the MaaS dashboard pages (API keys, authorization policies) will fail unless you inject the CA into the cluster trust bundle. See [Appendix D](#appendix-d--maas-with-self-signed-tls-certificates) for the full analysis and fix steps.
 
@@ -475,7 +475,7 @@ flowchart TD
         LIM["Limitador\ncounts tokens per user / window"]
     end
 
-    subgraph MAAS_CP["redhat-ods-applications"]
+    subgraph MAAS_CP["redhat-ai-gateway-infra"]
         direction TB
         MAPI["maas-api\nPOST /v1/api-keys\nGET  /v1/subscriptions"]
         MCTRL["maas-controller\nwatches MaaS CRDs + gateway annotation\ncreates Kuadrant policies"]
@@ -569,8 +569,8 @@ flowchart TD
 | `EnvoyFilter` `kuadrant-auth-*`, `kuadrant-ratelimiting-*` | `openshift-ingress` | Kuadrant operator |
 | `Kuadrant` | `kuadrant-system` | You (connectivity-link chart) |
 | `Authorino`, `Limitador` | `kuadrant-system` | Kuadrant operator |
-| `maas-api`, `maas-controller`, `maas-db` | `redhat-ods-applications` | RHOAI operator |
-| `HTTPRoute` maas-api-route | `redhat-ods-applications` | RHOAI operator |
+| `maas-api`, `maas-controller`, `maas-db` | `redhat-ai-gateway-infra` | RHOAI operator |
+| `HTTPRoute` maas-api-route | `redhat-ai-gateway-infra` | RHOAI operator |
 | `Tenant`, `MaaSSubscription`, `MaaSAuthPolicy` | `models-as-a-service` | You |
 | `MaaSModelRef` | `llm-d-demo` (model namespace) | Inference chart (`maas.enabled=true`) or dashboard toggle |
 | `AuthPolicy`, `TokenRateLimitPolicy` | `llm-d-demo` | `maas-controller` |
@@ -580,14 +580,14 @@ flowchart TD
 
 | Requirement | Chart / Command |
 | --- | --- |
-| RHOAI 3.4 with `kserve: Managed` and `modelsAsService: Managed` | Step 4 below — re-apply `gitops/instance/rhoai` with `--set modelsAsService=true` **after** gateway and database are ready |
+| RHOAI 3.5 with `kserve: Managed` and `aigateway.modelsAsAService: Managed` | Step 4 below — re-apply `gitops/instance/rhoai` with `--set modelsAsService=true` **after** gateway and database are ready |
 | Red Hat Connectivity Link v1.3.x installed | `gitops/operators/connectivity-link` |
 | **Kuadrant CR** in `kuadrant-system` | `gitops/instance/maas/connectivity-link` |
 | cert-manager Operator | `gitops/operators/cert-manager-operator` |
 | LeaderWorkerSet Operator | `gitops/operators/leader-worker-set` |
 | `GatewayClass` (`openshift.io/gateway-controller`) | created by `gitops/instance/maas/gateway` |
 | Gateway `maas-default-gateway` in `openshift-ingress` | created by `gitops/instance/maas/gateway` |
-| **PostgreSQL database** (`maas-db-config` secret in `redhat-ods-applications`) | `gitops/instance/maas/database` — Step 3 below |
+| **PostgreSQL database** (`maas-db-config` secret in `redhat-ai-gateway-infra`) | `gitops/instance/maas/database` — Step 3 below |
 | OCP 4.21 | version check: `oc version` |
 
 ### 9.2 Install Steps
@@ -698,7 +698,7 @@ oc get tokenratelimitpolicy maas-trlp-qwen3-8b -n llm-d-demo -o yaml
 | --- | --- | --- |
 | `HTTPRoutesReady: False` — `NotAllowedByListeners` | Model namespace not in Gateway `allowedRoutes` | Re-apply gateway chart with `--set "gateway.modelNamespaces={<ns>}"` |
 | `maas-api` pod not starting | Kuadrant CR not Ready or `maas-default-gateway` missing | Check `oc get kuadrant -n kuadrant-system` and `oc get gateway maas-default-gateway -n openshift-ingress` |
-| Kuadrant CR `Ready: False` — `MissingDependency` on OCP 4.19+ | Operator started before detecting OCP built-in Gateway API | Delete the operator pod to force a restart: `oc delete pod -n openshift-operators -l app.kubernetes.io/name=kuadrant-operator` |
+| Kuadrant CR `Ready: False` — `MissingDependency` on OCP 4.20+ | Operator started before detecting OCP built-in Gateway API | Delete the operator pod to force a restart: `oc delete pod -n openshift-operators -l app.kubernetes.io/name=kuadrant-operator` |
 | No `AuthConfig` resources after enabling MaaS | Kuadrant operator not running / CR not Ready | Verify `oc get kuadrant -n kuadrant-system` shows `Ready: True` |
 | `POST /maas-api/v1/api-keys` returns `500` | Authorino TLS not configured; Envoy→Authorino connection uses plain gRPC but Authorino expects TLS | Run Step 5 (Authorino TLS) then remove+re-add the gateway `authorino-tls-bootstrap` annotation |
 | `maas-default-gateway-authn-ssl` EnvoyFilter missing | Gateway annotation applied before Authorino TLS was enabled | Remove annotation (`oc annotate gateway ... security.opendatahub.io/authorino-tls-bootstrap-`) then re-add it |
@@ -792,7 +792,7 @@ oc logs -f -l app.kubernetes.io/component=llminferenceservice-router-scheduler -
 | Hardware profiles missing after toggling `disableKueue` | Dashboard does not reload config automatically | Restart the dashboard: `oc rollout restart deployment/rhods-dashboard -n redhat-ods-applications` |
 | model-catalog API returns 500 errors | PostgreSQL schema empty (migrations did not apply) | Restart model-catalog: `oc rollout restart deployment/model-catalog -n rhoai-model-registries` |
 | `LLMInferenceService` `HTTPRoutesReady: False` — `NotAllowedByListeners` | Model namespace missing from MaaS Gateway `allowedRoutes` | Re-apply gateway chart: `helm template gitops/instance/maas/gateway ... --set "gateway.modelNamespaces={<ns>}" \| oc apply -f -` |
-| Kuadrant CR `Ready: False` — `MissingDependency (istio/envoy gateway)` on OCP 4.19+ | Operator pod started before detecting OCP built-in Gateway API | `oc delete pod -n openshift-operators -l app.kubernetes.io/name=kuadrant-operator` |
+| Kuadrant CR `Ready: False` — `MissingDependency (istio/envoy gateway)` on OCP 4.20+ | Operator pod started before detecting OCP built-in Gateway API | `oc delete pod -n openshift-operators -l app.kubernetes.io/name=kuadrant-operator` |
 
 ---
 
@@ -800,7 +800,7 @@ oc logs -f -l app.kubernetes.io/component=llminferenceservice-router-scheduler -
 
 | Resource | URL |
 | --- | --- |
-| RHOAI 3.4 Documentation | https://docs.redhat.com/en/documentation/red_hat_openshift_ai_self-managed/3.4 |
+| RHOAI 3.5 Documentation | https://docs.redhat.com/en/documentation/red_hat_openshift_ai_self-managed/3.5 |
 | Supported Configurations 3.x | https://access.redhat.com/articles/rhoai-supported-configs-3.x |
 | Supported Hardware Configurations | https://docs.redhat.com/en/documentation/red_hat_ai/3/html/supported_product_and_hardware_configurations/index |
 | llm-d Release Component Versions | https://access.redhat.com/articles/7136620 |
@@ -808,7 +808,7 @@ oc logs -f -l app.kubernetes.io/component=llminferenceservice-router-scheduler -
 | cert-manager on OpenShift | https://docs.openshift.com/container-platform/4.21/security/cert_manager_operator/index.html |
 | ocp-secured-integration (cert-manager GitOps) | https://github.com/alvarolop/ocp-secured-integration |
 | RHOAI GitOps reference | https://github.com/alvarolop/rhoai-gitops |
-| RHOAI 3.4 MaaS Documentation | https://docs.redhat.com/en/documentation/red_hat_openshift_ai_self-managed/3.4/html/govern_llm_access_with_models-as-a-service/ |
+| RHOAI 3.5 MaaS Documentation | https://docs.redhat.com/en/documentation/red_hat_openshift_ai_self-managed/3.5/html/govern_llm_access_with_models-as-a-service/ |
 | MaaS upstream (opendatahub-io) | https://github.com/opendatahub-io/models-as-a-service |
 | llm-d upstream project | https://github.com/llm-d/llm-d |
 

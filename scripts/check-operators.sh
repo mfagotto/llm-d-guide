@@ -43,19 +43,20 @@ check_operator() {
 echo "=== Checking Required Operators (OCP 4.${OCP_MINOR}) ==="
 
 check_operator "Cert Manager" "cert-manager" "cert-manager-operator" "cert-manager-operator"
-check_operator "Service Mesh 3" "servicemesh" "openshift-operators" ""
 check_operator "Connectivity Link" "rhcl-operator" "openshift-operators" "rhcl-operator"
 check_operator "OpenShift AI" "rhods" "redhat-ods-operator" "rhods-operator"
-check_operator "Leader Worker Set" "leader-worker-set" "openshift-lws-operator" "leader-worker-set"
-check_operator "Node Feature Discovery" "nfd" "openshift-nfd" "nfd"
-check_operator "NVIDIA GPU Operator" "gpu-operator" "nvidia-gpu-operator" "gpu-operator-certified"
+# LeaderWorkerSet, NFD, NVIDIA: OLMv0 only (bundles don't support AllNamespaces)
+check_operator "Leader Worker Set" "leader-worker-set" "openshift-lws-operator" ""
+check_operator "Node Feature Discovery" "nfd" "openshift-nfd" ""
+check_operator "NVIDIA GPU Operator" "gpu-operator" "nvidia-gpu-operator" ""
 
 echo ""
 echo "=== Monitoring Operators ==="
 
 check_operator "Cluster Observability Operator" "cluster-observability" "openshift-cluster-observability-operator" "cluster-observability-operator"
-check_operator "Tempo Operator" "tempo" "openshift-tempo-operator" "tempo-product"
-check_operator "OpenTelemetry Operator" "opentelemetry" "openshift-opentelemetry-operator" "opentelemetry-product"
+# Tempo, OpenTelemetry: OLMv0 only (RHOAI detects via CSV, not ClusterExtension)
+check_operator "Tempo Operator" "tempo" "openshift-tempo-operator" ""
+check_operator "OpenTelemetry Operator" "opentelemetry" "openshift-opentelemetry-operator" ""
 check_operator "Grafana Operator" "grafana" "grafana-operator" "" "false"
 
 exit ${FAILURES}

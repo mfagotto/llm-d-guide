@@ -61,7 +61,7 @@ Do NOT decide this yourself — the number of GPU nodes affects cost and schedul
      -n nvidia-gpu-operator -l operators.coreos.com/gpu-operator-certified.nvidia-gpu-operator= --timeout=300s
    ```
 
-3. Apply the instance CRs (after both operators are installed -- CSVs `Succeeded` on 4.20, ClusterExtensions `Installed` on 4.21+):
+3. Apply the instance CRs (after both operator CSVs reach `Succeeded`):
    ```bash
    # Apply NFD instance (NodeFeatureDiscovery CR)
    oc apply -k gitops/instance/nfd

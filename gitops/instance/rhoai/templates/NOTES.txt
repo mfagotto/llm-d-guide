@@ -6,6 +6,6 @@ RHOAI instance chart has been installed. It deploys:
   - HardwareProfile(s) when hardwareProfiles.enabled is true (e.g. gpu-profile)
 
 Toggle components via values: featureStore, modelsAsService, distributedWorkloads,
-llamaStack, modelRegistry, mlflow, trustyai. Add more profiles under hardwareProfiles.profiles.
+ogx, modelRegistry, mlflow, trustyai. Add more profiles under hardwareProfiles.profiles.
 
 Validate with: helm template . -f values.yaml

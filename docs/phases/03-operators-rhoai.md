@@ -3,7 +3,7 @@
 > Part of the [llm-d-guide Co-pilot Runbook](../../AGENTS.md). See the
 > [Phase Map](../../AGENTS.md#phase-map) for the full sequence.
 
-**Goal:** Install Connectivity Link, LeaderWorkerSet, and RHOAI, then configure the DataScienceCluster.
+**Goal:** Install Connectivity Link, LeaderWorkerSet, monitoring operators (Tempo, OpenTelemetry), and RHOAI, then configure the DataScienceCluster.
 
 > **Do NOT install the Kueue operator** unless you specifically need GPUaaS or distributed
 > workload queue management (Ray, PyTorch distributed training). Installing Kueue causes the

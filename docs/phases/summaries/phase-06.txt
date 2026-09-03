@@ -6,16 +6,25 @@ Goal:     Deploy the MaaS gateway, configure Authorino TLS,
           bootstrap subscriptions, and verify API key creation.
 Time:     ~10-15 min
 
+RHOAI 3.5 changes:
+  - MaaS infra namespace: redhat-ai-gateway-infra (was redhat-ods-applications)
+  - DSC field: aigateway.modelsAsAService (was kserve.modelsAsService)
+  - Tenant CR deprecated (still works; AITenant + MaasTenantConfig in future)
+  - Body-based model routing supported (/v1/chat/completions with model name)
+
 Order matters:
   1. Deploy MaaS gateway
-  2. Configure database (maas-db-config secret)
+     ⚠ allowedRoutes must include redhat-ai-gateway-infra
+  2. Configure database (maas-db-config secret in redhat-ai-gateway-infra)
   3. Enable modelsAsService=true (re-apply RHOAI instance)
   4. Configure Authorino TLS for MaaS
      ⚠ Without Authorino TLS, API key endpoint returns 500
-  5. Deploy or publish a model for MaaS
+     ⚠ Race condition: steps 4a-4c must complete before 4d
+  5. Create Tenant CR in models-as-a-service namespace
+  6. Deploy or publish a model for MaaS
      (publish existing Phase 5 model OR deploy a new one)
-  6. Bootstrap subscription stack (MaaSSubscription + MaaSAuthPolicy)
-  7. Enable dashboard flags + verify API key creation
+  7. Bootstrap subscription stack (MaaSSubscription + MaaSAuthPolicy)
+  8. Enable dashboard flags + verify API key creation
 
 Human gate:
   - LLMInferenceService shows Ready: True
