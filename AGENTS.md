@@ -99,7 +99,7 @@ Add GPU worker nodes and install hardware detection and driver stack.
 **Full guide:** [docs/phases/02-gpu-nodes.md](docs/phases/02-gpu-nodes.md)
 
 ### Phase 3 — Core Operators + RHOAI
-Install Connectivity Link (RHCL 1.4.x), LeaderWorkerSet, **monitoring operators (Tempo, OpenTelemetry)**, and RHOAI, then configure the DataScienceCluster.
+Install Connectivity Link (RHCL 1.3.5+), LeaderWorkerSet, **monitoring operators (Tempo, OpenTelemetry)**, and RHOAI, then configure the DataScienceCluster.
 **Critical:** 
 - **Operator install order matters:** Connectivity Link → LeaderWorkerSet → **Tempo + OpenTelemetry (BEFORE RHOAI)** → RHOAI Operator → RHOAI Instance. The monitoring operators must be installed BEFORE RHOAI because the DSCInitialization requires them for monitoring stack initialization.
 - **OLMv0 vs OLMv1:** For plain-YAML operators (Connectivity Link, LeaderWorkerSet, Tempo, OpenTelemetry), apply `cluster-extension.yaml` on OCP 4.21+ or `operator.yaml` on 4.20. For RHOAI (Helm chart), pass `--set olmVersion=v1` on 4.21+. Wait conditions differ: on 4.20, wait for `CSV Succeeded`; on 4.21+, wait for `ClusterExtension` condition `Installed=True`.

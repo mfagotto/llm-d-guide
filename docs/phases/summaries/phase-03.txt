@@ -13,7 +13,7 @@ Install order (sequence matters):
 
   1. Connectivity Link → wait for operator ready
      → Create Kuadrant CR (Authorino + Limitador)
-     ℹ RHCL 1.4.x required (Wasm bug fixed; no version pin)
+     ℹ RHCL 1.3.5+ required (Wasm bug fixed in 1.3.5; no version pin)
      ⚠ Kuadrant Ready=False is EXPECTED (no GatewayClass yet)
   2. LeaderWorkerSet → wait CRD
   3. Tempo + OpenTelemetry → wait for operators ready (BEFORE RHOAI)

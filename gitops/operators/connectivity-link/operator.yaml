@@ -1,5 +1,5 @@
-# RHCL 1.4.x required for RHOAI 3.5 MaaS (Wasm shim bug fixed in 1.4.x).
-# Previously pinned to 1.3.4 for RHOAI 3.4 due to a Wasm shim bug in 1.4.0.
+# RHCL 1.3.5+ required for RHOAI 3.5 MaaS (Wasm shim bug fixed in 1.3.5).
+# Previously pinned to 1.3.4 for RHOAI 3.4 due to a Wasm shim bug.
 apiVersion: operators.coreos.com/v1alpha1
 kind: Subscription
 metadata:

@@ -31,10 +31,10 @@ connectivity-link operator  →  Kuadrant CR (observability enabled, Ready defer
 
 ### Step 1 — Connectivity Link (RHCL operator — Authorino + Limitador + Kuadrant CRDs)
 
-> **RHCL 1.4.x (RHOAI 3.5):** RHCL 1.4.x is required for RHOAI 3.5. The Wasm shim bug
-> that affected v1.4.0 with RHOAI 3.4 has been fixed. The operator subscription in
-> `gitops/operators/connectivity-link` no longer pins to a specific CSV — it tracks the
-> `stable` channel and picks up the latest 1.4.x release automatically.
+> **RHCL 1.3.5+ (RHOAI 3.5):** RHCL 1.3.5 or later is required for RHOAI 3.5. The Wasm shim bug
+> that required pinning to v1.3.4 in RHOAI 3.4 has been fixed in 1.3.5. The operator subscription
+> in `gitops/operators/connectivity-link` no longer pins to a specific CSV — it tracks the
+> `stable` channel with no version pin and picks up the latest release automatically.
 
 ```bash
 # OCP 4.20 (OLMv0):
