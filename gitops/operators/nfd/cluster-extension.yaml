@@ -1,0 +1,45 @@
+# OLMv1 (OCP 4.21+) — use this instead of operator.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    openshift.io/display-name: Node Feature Discovery
+  labels:
+    openshift.io/cluster-monitoring: "true"
+  name: openshift-nfd
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: nfd-installer
+  namespace: openshift-nfd
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: nfd-installer
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+- kind: ServiceAccount
+  name: nfd-installer
+  namespace: openshift-nfd
+---
+apiVersion: olm.operatorframework.io/v1
+kind: ClusterExtension
+metadata:
+  name: nfd
+spec:
+  namespace: openshift-nfd
+  serviceAccount:
+    name: nfd-installer
+  source:
+    sourceType: Catalog
+    catalog:
+      packageName: nfd
+  install:
+    preflight:
+      crdUpgradeSafety:
+        disabled: false

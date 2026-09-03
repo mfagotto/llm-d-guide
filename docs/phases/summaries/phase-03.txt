@@ -7,14 +7,18 @@ Goal:     Install Connectivity Link, LeaderWorkerSet, monitoring
 Time:     ~20-30 min
 
 Install order (sequence matters):
-  1. Connectivity Link → approve InstallPlan → wait CSVs
+  OCP 4.20: apply operator.yaml (OLMv0 Subscription)
+  OCP 4.21+: apply cluster-extension.yaml (OLMv1)
+  Helm charts: pass --set olmVersion=v1 on 4.21+
+
+  1. Connectivity Link → wait for operator ready
      → Create Kuadrant CR (Authorino + Limitador)
      ℹ RHCL 1.4.x required (Wasm bug fixed; no version pin)
      ⚠ Kuadrant Ready=False is EXPECTED (no GatewayClass yet)
   2. LeaderWorkerSet → wait CRD
-  3. Tempo + OpenTelemetry → wait CSVs (BEFORE RHOAI)
+  3. Tempo + OpenTelemetry → wait for operators ready (BEFORE RHOAI)
   4. RHOAI operator → ask user: stable or ea
-     → wait CSV Succeeded
+     → wait for operator ready
   5. RHOAI instance (DSCi + DSC) → two-pass apply
      → wait LLMInferenceService CRD + controller pods
 

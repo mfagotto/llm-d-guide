@@ -1,0 +1,47 @@
+# OLMv1 (OCP 4.21+) — use this instead of operator.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    openshift.io/display-name: Red Hat Tempo Operator
+  name: openshift-tempo-operator
+  labels:
+    openshift.io/cluster-monitoring: "true"
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: tempo-installer
+  namespace: openshift-tempo-operator
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: tempo-installer
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+- kind: ServiceAccount
+  name: tempo-installer
+  namespace: openshift-tempo-operator
+---
+apiVersion: olm.operatorframework.io/v1
+kind: ClusterExtension
+metadata:
+  name: tempo-product
+spec:
+  namespace: openshift-tempo-operator
+  serviceAccount:
+    name: tempo-installer
+  source:
+    sourceType: Catalog
+    catalog:
+      packageName: tempo-product
+      channels:
+      - stable
+  install:
+    preflight:
+      crdUpgradeSafety:
+        disabled: false

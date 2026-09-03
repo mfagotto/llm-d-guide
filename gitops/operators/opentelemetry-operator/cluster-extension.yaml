@@ -1,0 +1,47 @@
+# OLMv1 (OCP 4.21+) — use this instead of operator.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    openshift.io/display-name: Red Hat build of OpenTelemetry Operator
+  name: openshift-opentelemetry-operator
+  labels:
+    openshift.io/cluster-monitoring: "true"
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: otel-installer
+  namespace: openshift-opentelemetry-operator
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: otel-installer
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+- kind: ServiceAccount
+  name: otel-installer
+  namespace: openshift-opentelemetry-operator
+---
+apiVersion: olm.operatorframework.io/v1
+kind: ClusterExtension
+metadata:
+  name: opentelemetry-product
+spec:
+  namespace: openshift-opentelemetry-operator
+  serviceAccount:
+    name: otel-installer
+  source:
+    sourceType: Catalog
+    catalog:
+      packageName: opentelemetry-product
+      channels:
+      - stable
+  install:
+    preflight:
+      crdUpgradeSafety:
+        disabled: false

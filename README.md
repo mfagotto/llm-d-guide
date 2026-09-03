@@ -168,6 +168,26 @@ Set **`RHOAI_OLM_PROFILE`** when rendering the operator chart (defaults to stabl
 
 You can instead edit `gitops/operators/rhoai/values.yaml` (`olmProfile` or explicit `channel` / `startingCSV`) or pass `--set olmProfile=ea` to `helm template`.
 
+### 2.6 OLMv1 on OCP 4.21+ (ClusterExtension)
+
+OCP 4.21 introduces **OLMv1** as the default operator management system. The classic OLMv0 flow (`Subscription` + `InstallPlan` + `CSV`) still works but is deprecated. This guide supports both:
+
+| OCP version | Install method | Operator file | Helm flag |
+|---|---|---|---|
+| 4.20 | OLMv0 (`Subscription`) | `operator.yaml` | *(default)* |
+| 4.21+ | OLMv1 (`ClusterExtension`) | `cluster-extension.yaml` | `--set olmVersion=v1` |
+
+OLMv1 replaces four OLMv0 resources with a single `ClusterExtension` CR. It requires a pre-created `ServiceAccount` with explicit RBAC (OLMv0 auto-grants permissions; OLMv1 does not). Each operator directory ships both files; the `install.sh` scripts for NFD and NVIDIA auto-detect the OCP version.
+
+Detect which path to use:
+
+```bash
+OCP_MINOR=$(oc version -o json | jq -r '.openshiftVersion' | cut -d. -f2)
+echo "OCP 4.${OCP_MINOR} — $([ "${OCP_MINOR}" -ge 21 ] && echo 'OLMv1' || echo 'OLMv0')"
+```
+
+For the full details — CRD anatomy, RBAC requirements, catalog mapping, wait conditions, and OCP 4.22 forward-looking notes — see **[OLMv1 Migration Reference](docs/reference/olmv1-migration.md)**.
+
 ---
 
 ## 3. Prerequisite Operators

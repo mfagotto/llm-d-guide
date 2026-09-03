@@ -1,0 +1,39 @@
+# OLMv1 (OCP 4.21+) — use this instead of operator.yaml
+# RHCL 1.4.x required for RHOAI 3.5 MaaS (Wasm shim bug fixed in 1.4.x).
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: rhcl-installer
+  namespace: openshift-operators
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: rhcl-installer
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+- kind: ServiceAccount
+  name: rhcl-installer
+  namespace: openshift-operators
+---
+apiVersion: olm.operatorframework.io/v1
+kind: ClusterExtension
+metadata:
+  name: rhcl-operator
+spec:
+  namespace: openshift-operators
+  serviceAccount:
+    name: rhcl-installer
+  source:
+    sourceType: Catalog
+    catalog:
+      packageName: rhcl-operator
+      channels:
+      - stable
+  install:
+    preflight:
+      crdUpgradeSafety:
+        disabled: false

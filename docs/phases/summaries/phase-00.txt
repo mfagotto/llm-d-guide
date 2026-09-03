@@ -7,7 +7,10 @@ Time:     ~5 min
 
 Steps:
   1. Run ./scripts/preflight-validation.sh
-  2. Auto-derive: CLUSTER_DOMAIN, AWS_REGION, INFRA_ID, AMI_ID
+  2. Auto-derive: OCP_MINOR, CLUSTER_DOMAIN, AWS_REGION, INFRA_ID, AMI_ID
+     → OCP_MINOR determines install method:
+       4.20  = OLMv0 (Subscription + operator.yaml)
+       4.21+ = OLMv1 (ClusterExtension + cluster-extension.yaml)
   3. Ask user: CLOUD (aws / none)
   4. Ask user: TLS_ISSUER (letsencrypt / local-ca)
   5. Ask user: AWS_INSTANCE_TYPE (if CLOUD=aws)

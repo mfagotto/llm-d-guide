@@ -1,0 +1,45 @@
+# OLMv1 (OCP 4.21+) — use this instead of operator.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: openshift-lws-operator
+  labels:
+    openshift.io/cluster-monitoring: "true"
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: lws-installer
+  namespace: openshift-lws-operator
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: lws-installer
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+- kind: ServiceAccount
+  name: lws-installer
+  namespace: openshift-lws-operator
+---
+apiVersion: olm.operatorframework.io/v1
+kind: ClusterExtension
+metadata:
+  name: leader-worker-set
+spec:
+  namespace: openshift-lws-operator
+  serviceAccount:
+    name: lws-installer
+  source:
+    sourceType: Catalog
+    catalog:
+      packageName: leader-worker-set
+      channels:
+      - stable-v1.0
+  install:
+    preflight:
+      crdUpgradeSafety:
+        disabled: false

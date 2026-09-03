@@ -1,5 +1,8 @@
 # Default values for cert-manager-operator.
 
+# olmVersion: OLM install method — "v0" (Subscription, OCP 4.20) or "v1" (ClusterExtension, OCP 4.21+)
+olmVersion: v0
+
 # cloud: target cloud provider.
 # Supported values: "aws", "none"
 # - "aws"  — adds CLOUD_CREDENTIALS_SECRET_NAME env var and deploys the

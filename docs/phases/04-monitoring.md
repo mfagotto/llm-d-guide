@@ -35,6 +35,8 @@ oc get pods -n openshift-user-workload-monitoring -w
 
 **Note:** In RHOAI 3.4.1 the operator was pinned to COO v1.4.0 because the Perses image did not support newer CLI flags. This pin is removed for RHOAI 3.5 — the updated Perses image supports current COO versions. Install the latest available version from the channel.
 
+**OCP 4.20 (OLMv0):**
+
 ```bash
 oc apply -k gitops/operators/cluster-observability-operator
 
@@ -53,6 +55,19 @@ oc wait --for=jsonpath='{.status.phase}'=Succeeded csv \
 # Verify COO is installed
 oc get csv -n openshift-cluster-observability-operator | grep cluster-observability
 # Expected: cluster-observability-operator.v<version>   Succeeded
+```
+
+**OCP 4.21+ (OLMv1):**
+
+```bash
+oc apply -f gitops/operators/cluster-observability-operator/cluster-extension.yaml
+
+# Wait for ClusterExtension to report Installed
+oc wait --for=condition=Installed clusterextension/cluster-observability-operator --timeout=300s
+
+# Verify COO is installed
+oc get clusterextension cluster-observability-operator
+# Expected: cluster-observability-operator   Installed
 ```
 
 ### Step 3 — Enable Perses dashboards in the OpenShift console
@@ -141,4 +156,4 @@ oc get odhdashboardconfig odh-dashboard-config -n redhat-ods-applications \
 
 This surfaces a monitoring drawer inside the RHOAI dashboard (distinct from the OCP console's Observe → Dashboards view configured in Steps 3–4). The drawer becomes functional after the full monitoring stack (Tempo, OpenTelemetry, COO) is deployed.
 
-**End of Phase 4:** Stop here and report monitoring stack status to the user. Verify COO CSV is Succeeded. Wait for confirmation before proceeding to [Phase 5](05-llmd-quickstart.md).
+**End of Phase 4:** Stop here and report monitoring stack status to the user. Verify COO is installed (CSV `Succeeded` on OCP 4.20, ClusterExtension `Installed` on OCP 4.21+). Wait for confirmation before proceeding to [Phase 5](05-llmd-quickstart.md).

@@ -14,8 +14,12 @@
 If any check fails, use these individual commands to diagnose:
 
 ```bash
-# OCP version — RHOAI 3.5 supports 4.19–4.20 (llm-d requires 4.20+)
+# OCP version — RHOAI 3.5 supports 4.20–4.21 (llm-d requires 4.20+)
 oc version
+
+# OCP minor version — determines OLMv0 (4.20) vs OLMv1 (4.21+) install path
+OCP_MINOR=$(oc version -o json | jq -r '.openshiftVersion' | cut -d. -f2)
+echo "OCP 4.${OCP_MINOR} detected — operator install method: $([ "${OCP_MINOR}" -ge 21 ] && echo 'OLMv1 (ClusterExtension)' || echo 'OLMv0 (Subscription)')"
 
 # Cluster admin access
 oc whoami

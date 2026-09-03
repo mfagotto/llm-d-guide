@@ -16,6 +16,9 @@
 #
 # To use EA from defaults, switch olmProfile (see commented line below).
 
+# olmVersion: OLM install method — "v0" (Subscription, OCP 4.20) or "v1" (ClusterExtension, OCP 4.21+)
+olmVersion: v0
+
 olmProfile: stable
 # olmProfile: ea
 

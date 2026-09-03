@@ -37,13 +37,20 @@ connectivity-link operator  →  Kuadrant CR (observability enabled, Ready defer
 > `stable` channel and picks up the latest 1.4.x release automatically.
 
 ```bash
+# OCP 4.20 (OLMv0):
 oc apply -k ./gitops/operators/connectivity-link
 # InstallPlan may require manual approval due to dependencies
 oc get installplan -n openshift-operators | grep -i "requiresapproval"
 # If an InstallPlan is pending, approve it:
 # oc patch installplan <NAME> -n openshift-operators --type merge -p '{"spec":{"approved":true}}'
 oc get csv -n openshift-operators -w | grep -E "rhcl|authorino|limitador"
-# Wait for AuthPolicy CRD
+
+# OCP 4.21+ (OLMv1):
+oc apply -f gitops/operators/connectivity-link/cluster-extension.yaml
+oc wait --for='jsonpath={.status.conditions[?(@.type=="Installed")].status}=True' \
+  clusterextension/rhcl-operator --timeout=300s
+
+# Wait for AuthPolicy CRD (both OLMv0 and OLMv1)
 oc wait --for=condition=Established crd/authpolicies.kuadrant.io --timeout=300s
 ```
 
@@ -72,13 +79,21 @@ oc get kuadrant kuadrant -n kuadrant-system -o jsonpath='{.spec.observability.en
 ### Step 2 — Leader Worker Set
 
 ```bash
+# OCP 4.20 (OLMv0):
 until oc apply -k ./gitops/operators/leader-worker-set; do
   echo "Waiting for LeaderWorkerSet CRD to become available..."
   sleep 10
 done
+oc get csv -n openshift-lws-operator -w | grep -E "leader-worker-set"
+
+# OCP 4.21+ (OLMv1):
+oc apply -f gitops/operators/leader-worker-set/cluster-extension.yaml
+oc wait --for='jsonpath={.status.conditions[?(@.type=="Installed")].status}=True' \
+  clusterextension/leader-worker-set --timeout=300s
+
+# Wait for CRDs (both OLMv0 and OLMv1)
 oc wait --for=condition=Established crd/leaderworkersetoperators.operator.openshift.io --timeout=300s
 oc wait --for=condition=Established crd/leaderworkersets.leaderworkerset.x-k8s.io --timeout=300s
-oc get csv -n openshift-lws-operator -w | grep -E "leader-worker-set"
 ```
 
 ### Step 3 — Monitoring Operators (BEFORE RHOAI)
@@ -87,12 +102,28 @@ oc get csv -n openshift-lws-operator -w | grep -E "leader-worker-set"
 
 ```bash
 # a) Tempo Operator (distributed tracing)
+
+# OCP 4.20 (OLMv0):
 oc apply -k gitops/operators/tempo-operator
 oc get csv -n openshift-opentelemetry-operator -w | grep -E "tempo"
 
+# OCP 4.21+ (OLMv1):
+oc apply -f gitops/operators/tempo-operator/cluster-extension.yaml
+oc wait --for='jsonpath={.status.conditions[?(@.type=="Installed")].status}=True' \
+  clusterextension/tempo-product --timeout=300s
+
 # b) OpenTelemetry Operator
+
+# OCP 4.20 (OLMv0):
 oc apply -k gitops/operators/opentelemetry-operator
 oc get csv -n openshift-opentelemetry-operator -w | grep -E "opentelemetry"
+
+# OCP 4.21+ (OLMv1):
+oc apply -f gitops/operators/opentelemetry-operator/cluster-extension.yaml
+oc wait --for='jsonpath={.status.conditions[?(@.type=="Installed")].status}=True' \
+  clusterextension/opentelemetry-product --timeout=300s
+
+# Wait for CRD (both OLMv0 and OLMv1)
 oc wait --for=condition=Established crd/instrumentations.opentelemetry.io --timeout=120s
 ```
 
@@ -116,9 +147,17 @@ oc get packagemanifest rhods-operator -n openshift-marketplace \
 #   oc delete csv <previous-csv> -n redhat-ods-operator
 
 RHOAI_OLM_PROFILE="${RHOAI_OLM_PROFILE:-stable}"
+
+# OCP 4.20 (OLMv0):
 helm template rhoai-operator ./gitops/operators/rhoai \
   --set olmProfile="${RHOAI_OLM_PROFILE}" | oc apply -f -
 oc get csv -n redhat-ods-operator -w | grep -E "rhods"
+
+# OCP 4.21+ (OLMv1) — add --set olmVersion=v1:
+helm template rhoai-operator ./gitops/operators/rhoai \
+  --set olmProfile="${RHOAI_OLM_PROFILE}" --set olmVersion=v1 | oc apply -f -
+oc wait --for='jsonpath={.status.conditions[?(@.type=="Installed")].status}=True' \
+  clusterextension/rhods-operator --timeout=600s
 ```
 
 ### Step 5 — Configure OpenShift AI (DSCInitialization + DataScienceCluster)

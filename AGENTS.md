@@ -2,7 +2,7 @@
 
 This file gives assistants (Claude Code, OpenCode, Cursor, and compatible tools) persistent
 context for installing **Red Hat OpenShift AI 3.5** (self-managed) with **llm-d** on
-**OpenShift Container Platform 4.19–4.20** (llm-d requires 4.20+). The canonical, step-by-step manual is [`README.md`](README.md);
+**OpenShift Container Platform 4.20–4.21** (llm-d requires 4.20+). The canonical, step-by-step manual is [`README.md`](README.md);
 use this runbook for phased execution, wait conditions, and human gates. Work through one phase
 per session. Always tell the assistant which phase you are on and paste any relevant error output
 before asking for help.
@@ -32,10 +32,13 @@ troubleshooting) is in [`docs/reference/`](docs/reference/).
 
 | Variable | Command | Used in |
 |---|---|---|
+| `OCP_MINOR` | `oc version -o json \| jq -r '.openshiftVersion' \| cut -d. -f2` | All phases |
 | `CLUSTER_DOMAIN` | `oc get dns.config/cluster -o jsonpath='{.spec.baseDomain}'` | Phase 1 |
 | `AWS_REGION` | `oc get infrastructure cluster -o jsonpath='{.status.platformStatus.aws.region}'` | Phase 1, 2 |
 | `INFRA_ID` | `oc get infrastructure cluster -o jsonpath='{.status.infrastructureName}'` | Phase 2 |
 | `AMI_ID` | `oc get machineset -n openshift-machine-api -o jsonpath='{.items[0].spec.template.spec.providerSpec.value.ami.id}'` | Phase 2 |
+
+> **Note on `OCP_MINOR`:** Determines the operator install method. OCP 4.20 uses OLMv0 (`Subscription` + `InstallPlan`). OCP 4.21+ uses OLMv1 (`ClusterExtension`). Both systems coexist on 4.21, but this guide aligns with the OLMv1 path for forward compatibility. For Helm charts (cert-manager, RHOAI), pass `--set olmVersion=v1` on OCP 4.21+. For plain-YAML operators, apply `cluster-extension.yaml` instead of `operator.yaml`. The `install.sh` scripts for NFD and NVIDIA auto-detect the OCP version.
 
 > **Note on `AMI_ID`:** Every OCP cluster on AWS already has worker MachineSets whose `providerSpec` contains the exact RHCOS AMI the cluster was installed with — correct image, region, and architecture. Never attempt to discover this via `aws ec2 describe-images`.
 
@@ -77,14 +80,14 @@ troubleshooting) is in [`docs/reference/`](docs/reference/).
 ## Phase Summaries
 
 ### Phase 0 — Cluster Validation
-Confirm the cluster is ready: OCP 4.19–4.20 (llm-d requires 4.20+), cluster admin access, default StorageClass, no ODH or Service Mesh 2.x. On OCP 4.21+, disable the OLMv1 catalog before installing NFD or NVIDIA GPU operators (it redirects to `ClusterExtensions` instead of the standard installation form).
+Confirm the cluster is ready: OCP 4.20–4.21 (llm-d requires 4.20+), cluster admin access, default StorageClass, no ODH or Service Mesh 2.x. Derive `OCP_MINOR` to determine the operator install method: OCP 4.20 uses OLMv0 (`Subscription`), OCP 4.21+ uses OLMv1 (`ClusterExtension`). Each operator directory has both `operator.yaml` (OLMv0) and `cluster-extension.yaml` (OLMv1); Helm charts accept `--set olmVersion=v1`.
 **Critical:** Derive auto-derived variables from the cluster (see table above). Ask the user whether their infrastructure is running on AWS. Then ask whether they want Let's Encrypt or a local CA for TLS (see `TLS_ISSUER` in the Environment Variables table). If on AWS, also ask for `AWS_INSTANCE_TYPE`.
 **Full guide:** [docs/phases/00-validation.md](docs/phases/00-validation.md)
 
 ### Phase 1 — TLS Certificate Automation
 Install cert-manager operator and automate TLS certificate lifecycle.
 **Critical:**
-- Confirm `CLOUD` and `TLS_ISSUER` before applying (see Environment Variables above). First `helm template | oc apply` will fail on the `CertManager` CR — wait for CSV `Succeeded`, then re-run.
+- Confirm `CLOUD` and `TLS_ISSUER` before applying (see Environment Variables above). On OCP 4.21+, pass `--set olmVersion=v1` to the cert-manager Helm chart. First `helm template | oc apply` will fail on the `CertManager` CR — wait for the operator to be ready (`CSV Succeeded` on 4.20, `ClusterExtension Installed` on 4.21+), then re-run.
 - For `TLS_ISSUER=letsencrypt` (requires `CLOUD=aws`): run `./scripts/validate-cluster-domain.sh` (mandatory) and **stop to confirm the extracted domain with the user** before applying the cert-manager-route53 chart — a wrong domain causes silent Let's Encrypt failures.
 - For `TLS_ISSUER=local-ca` (works on any platform, including AWS): follow the **local CA** path (Step 2 Alternative in the Phase 1 guide) — it creates a local CA chain via cert-manager that issues properly signed certificates. After applying, the CA must be injected into the cluster trust bundle (`user-ca-bundle` ConfigMap + Proxy patch). This is mandatory for MaaS dashboard compatibility.
 - The human gate requires all certificates to show `READY=True` in the verify command output — `Issuing` means the cert is not done yet; wait until `Ready`.
@@ -92,13 +95,14 @@ Install cert-manager operator and automate TLS certificate lifecycle.
 
 ### Phase 2 — GPU Nodes + NFD + NVIDIA GPU Operator
 Add GPU worker nodes and install hardware detection and driver stack.
-**Critical:** Ask the user how many AZs (3 for production, 1 for testing). ClusterPolicy webhook may reject the CR if NFD labels aren't present yet — apply NFD first.
+**Critical:** Ask the user how many AZs (3 for production, 1 for testing). ClusterPolicy webhook may reject the CR if NFD labels aren't present yet — apply NFD first. The `install.sh` scripts for NFD and NVIDIA auto-detect the OCP version and use the correct install method (OLMv0 or OLMv1).
 **Full guide:** [docs/phases/02-gpu-nodes.md](docs/phases/02-gpu-nodes.md)
 
 ### Phase 3 — Core Operators + RHOAI
 Install Connectivity Link (RHCL 1.4.x), LeaderWorkerSet, **monitoring operators (Tempo, OpenTelemetry)**, and RHOAI, then configure the DataScienceCluster.
 **Critical:** 
 - **Operator install order matters:** Connectivity Link → LeaderWorkerSet → **Tempo + OpenTelemetry (BEFORE RHOAI)** → RHOAI Operator → RHOAI Instance. The monitoring operators must be installed BEFORE RHOAI because the DSCInitialization requires them for monitoring stack initialization.
+- **OLMv0 vs OLMv1:** For plain-YAML operators (Connectivity Link, LeaderWorkerSet, Tempo, OpenTelemetry), apply `cluster-extension.yaml` on OCP 4.21+ or `operator.yaml` on 4.20. For RHOAI (Helm chart), pass `--set olmVersion=v1` on 4.21+. Wait conditions differ: on 4.20, wait for `CSV Succeeded`; on 4.21+, wait for `ClusterExtension` condition `Installed=True`.
 - Enable Kuadrant observability (`spec.observability.enable: true`) when creating the Kuadrant CR — required for the monitoring stack in Phase 4.
 - Do NOT install Kueue unless explicitly required. 
 - `modelsAsService` must be `false` during this phase. 
@@ -143,6 +147,7 @@ Deploy the MaaS gateway, configure Authorino TLS, bootstrap the subscription sta
 
 - [Repo Layout](docs/reference/repo-layout.md) — chart and directory map (load only when locating a path)
 - [Operator Matrix](docs/reference/operator-matrix.md) — what is required vs optional per workload type (load at Phase 3)
+- [OLMv1 Migration](docs/reference/olmv1-migration.md) — ClusterExtension CRD, RBAC, catalog mapping, wait conditions (load when `OCP_MINOR >= 21`)
 - [Validation Commands](docs/reference/validation.md) — `oc get` checks for operators, CRDs, gateways, MaaS
 - [MaaS Troubleshooting](docs/reference/maas-troubleshooting.md) — Key facts, gotchas, token rate limiting, dashboard flags
 - [ExternalModel Guide](docs/reference/external-models.md) — Credential injection, MaaSModelRef naming, monitoring
@@ -170,7 +175,8 @@ If something went wrong, paste the failing command and its output and say which 
 - **Do NOT install Kueue** unless explicitly required for GPUaaS or distributed workloads — it causes namespace label conflicts with hardware profiles.
 - **Prefer `oc apply -k`** over raw `oc apply -f` for kustomize paths — it respects the overlay ordering. The RHOAI **operator** install is an exception: use `helm template rhoai-operator ./gitops/operators/rhoai | oc apply -f -` (see README §2.5).
 - **Never use `aws ec2 describe-images` to look up `AMI_ID`** — the correct RHCOS AMI is already embedded in the cluster's existing MachineSets; read it with `oc get machineset -n openshift-machine-api -o jsonpath='{.items[0].spec.template.spec.providerSpec.value.ami.id}'`.
-- **Never ask the user for auto-derived variables** (`AWS_REGION`, `AMI_ID`, `INFRA_ID`, `CLUSTER_DOMAIN`) — always derive them from the cluster using the commands in the Environment Variables table.
+- **Never ask the user for auto-derived variables** (`OCP_MINOR`, `AWS_REGION`, `AMI_ID`, `INFRA_ID`, `CLUSTER_DOMAIN`) — always derive them from the cluster using the commands in the Environment Variables table.
+- **Use the correct OLM path based on `OCP_MINOR`:** On 4.20, apply `operator.yaml` and wait for `CSV Succeeded`. On 4.21+, apply `cluster-extension.yaml` and wait for `oc get clusterextension <name> -o jsonpath='{.status.conditions[?(@.type=="Installed")].status}'` to return `True`. For Helm charts, pass `--set olmVersion=v1` on 4.21+. Never mix OLMv0 and OLMv1 for the same operator.
 - **Always run `./scripts/validate-cluster-domain.sh`** (do not just read it) before applying the cert-manager-route53 chart, and stop to confirm the extracted domain with the user before proceeding.
 - **Never re-implement script logic inline** — if a named script exists for a task (e.g. `preflight-validation.sh`, `validate-cluster-domain.sh`), run it. Do not substitute your own commands.
 - If a command produces unexpected output, **stop and report** rather than continuing.

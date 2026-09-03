@@ -1,3 +1,4 @@
+{{- if ne .Values.olmVersion "v1" }}
 {{- include "rhoai-operator.validateOverrides" . }}
 apiVersion: operators.coreos.com/v1alpha1
 kind: Subscription
@@ -11,3 +12,4 @@ spec:
   source: {{ .Values.subscription.source }}
   sourceNamespace: {{ .Values.subscription.sourceNamespace }}
   startingCSV: {{ include "rhoai-operator.subscriptionStartingCSV" . }}
+{{- end }}

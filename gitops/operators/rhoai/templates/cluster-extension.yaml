@@ -1,0 +1,39 @@
+{{- if eq .Values.olmVersion "v1" }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: rhoai-installer
+  namespace: {{ .Values.namespace.name }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: rhoai-installer
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+- kind: ServiceAccount
+  name: rhoai-installer
+  namespace: {{ .Values.namespace.name }}
+---
+apiVersion: olm.operatorframework.io/v1
+kind: ClusterExtension
+metadata:
+  name: {{ .Values.subscription.name }}
+spec:
+  namespace: {{ .Values.namespace.name }}
+  serviceAccount:
+    name: rhoai-installer
+  source:
+    sourceType: Catalog
+    catalog:
+      packageName: {{ .Values.subscription.name }}
+      channels:
+      - {{ include "rhoai-operator.subscriptionChannel" . }}
+  install:
+    preflight:
+      crdUpgradeSafety:
+        disabled: false
+{{- end }}

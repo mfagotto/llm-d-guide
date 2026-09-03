@@ -31,6 +31,8 @@ CLOUD=aws   # or "none" for bare metal / non-AWS
 
 Install the operator (retry loop handles the two-pass CRD race):
 
+**OCP 4.20 (OLMv0):**
+
 ```bash
 for i in $(seq 1 60); do
   if helm template gitops/operators/cert-manager-operator \
@@ -48,14 +50,38 @@ oc wait --for=jsonpath='{.status.phase}'=Succeeded csv \
   --timeout=300s
 ```
 
-> **Note (two-pass apply):** The first `helm template | oc apply` will fail on the `CertManager` CR with `no matches for kind "CertManager"` because the operator CRD is not registered until the CSV reaches `Succeeded`. This is expected. Wait for the CSV, then run the same command a second time — it applies cleanly:
+**OCP 4.21+ (OLMv1) — add `--set olmVersion=v1`:**
+
+```bash
+for i in $(seq 1 60); do
+  if helm template gitops/operators/cert-manager-operator \
+       --set cloud=${CLOUD} --set olmVersion=v1 --name-template cert-manager | oc apply -f -; then
+    break
+  fi
+  [[ $i -eq 60 ]] && { echo "Gave up after 60 attempts"; exit 1; }
+  sleep 5
+done
+
+# Wait for ClusterExtension (replaces CSV on OLMv1)
+oc wait --for=jsonpath='{.status.conditions[?(@.type=="Installed")].status}'=True clusterextension \
+  openshift-cert-manager-operator \
+  --timeout=300s
+```
+
+> **Note (two-pass apply):** The first `helm template | oc apply` will fail on the `CertManager` CR with `no matches for kind "CertManager"` because the operator CRD is not registered until the CSV (OLMv0) or ClusterExtension (OLMv1) reports success. This is expected. Wait for the operator to be ready, then run the same command a second time — it applies cleanly:
 > ```bash
-> # Wait for CSV
+> # OCP 4.20 — wait for CSV:
 > oc wait --for=jsonpath='{.status.phase}'=Succeeded csv \
 >   -n cert-manager-operator \
 >   -l operators.coreos.com/openshift-cert-manager-operator.cert-manager-operator= \
 >   --timeout=300s
-> # Second pass — applies the CertManager CR
+>
+> # OCP 4.21+ — wait for ClusterExtension:
+> oc wait --for=jsonpath='{.status.conditions[?(@.type=="Installed")].status}'=True clusterextension \
+>   openshift-cert-manager-operator \
+>   --timeout=300s
+>
+> # Second pass — applies the CertManager CR (add --set olmVersion=v1 on OCP 4.21+)
 > helm template gitops/operators/cert-manager-operator \
 >   --set cloud=${CLOUD} --name-template cert-manager | oc apply -f -
 > ```
@@ -247,7 +273,7 @@ oc get orders,challenges -n openshift-ingress
 **Human gate:** Every certificate must show `READY=True` under the `READY` column above. `Issuing` is not done — wait until `Ready=True` for all certs before proceeding. Do not proceed with any cert showing `False` or blank.
 
 **Known gotchas:**
-- The first `helm template | oc apply` will fail on the `CertManager` CR because the operator CRD isn't registered until the CSV reaches `Succeeded`. Wait for `Succeeded`, then re-run the same command — it applies cleanly on the second pass.
+- The first `helm template | oc apply` will fail on the `CertManager` CR because the operator CRD isn't registered until the CSV (OLMv0) or ClusterExtension (OLMv1) reports success. Wait for the operator to be ready, then re-run the same command — it applies cleanly on the second pass.
 - If using ArgoCD: if the cert-manager webhook is slow to start, the ArgoCD sync may fail on the first attempt. Re-sync after all 3 pods are Running.
 - `oc get orders, challenges` (with a space) is invalid syntax — always use `oc get orders,challenges` (no space).
 
