@@ -164,6 +164,8 @@ At the beginning of each session, say which tool you use and your phase, for exa
 
 If something went wrong, paste the failing command and its output and say which phase you were on. The assistant should diagnose without restarting from scratch.
 
+**Upgrading this guide:** [docs/reference/guide-upgrade-workflow.md](docs/reference/guide-upgrade-workflow.md) — branch strategy, step-by-step workflow, and what to update when a new RHOAI version is released.
+
 ---
 
 ## Constraints and Rules for the assistant
