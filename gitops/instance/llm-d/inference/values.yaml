@@ -100,7 +100,7 @@ vllm:
   # User-specific vLLM flags (appended after framework-managed flags)
   # Example:
   #   extraArgs:
-  #     - "--disable-uvicorn-access-log"
+  #     - "--disable-access-log-for-endpoints=/health,/metrics,/ping"
   #     - "--enable-auto-tool-choice"
   #     - "--tool-call-parser=hermes"
   extraArgs: []

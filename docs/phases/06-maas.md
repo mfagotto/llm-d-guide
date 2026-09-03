@@ -309,7 +309,7 @@ Create an API key and call a model:
 ```bash
 TOKEN=$(oc whoami -t)
 MAAS_GW="maas.${CLUSTER_DOMAIN}"
-curl -sk -X POST "https://${MAAS_GW}/maas-api/v1/api-keys" \
+curl -sk -X POST "https://${MAAS_GW}/v1/api-keys" \
   -H "Authorization: Bearer ${TOKEN}" \
   -H "Content-Type: application/json" \
   -d '{"name":"test-key","expiresInDays":1}'
@@ -327,7 +327,7 @@ curl -sk -X POST "https://${MAAS_GW}/maas-api/v1/api-keys" \
 
 ## Known gotchas
 
-- **`AUTH_FAILURE` on `POST /maas-api/v1/api-keys` — `"Missing or empty username header"`:** When Kuadrant AuthPolicies are `Accepted: False`, Envoy bypasses Authorino entirely — requests reach maas-api with no auth headers injected, so `X-MaaS-Username` is always missing. The fix is ALWAYS the Kuadrant operator restart — do NOT debug TLS, kubernetesTokenReview audiences, or patch the AuthPolicy directly:
+- **`AUTH_FAILURE` on `POST /v1/api-keys` — `"Missing or empty username header"`:** When Kuadrant AuthPolicies are `Accepted: False`, Envoy bypasses Authorino entirely — requests reach maas-api with no auth headers injected, so `X-MaaS-Username` is always missing. The fix is ALWAYS the Kuadrant operator restart — do NOT debug TLS, kubernetesTokenReview audiences, or patch the AuthPolicy directly:
   ```bash
   # Confirm AuthPolicies are Accepted: False:
   oc get authpolicy -A -o custom-columns="NS:.metadata.namespace,NAME:.metadata.name,ACCEPTED:.status.conditions[?(@.type==\"Accepted\")].status"
@@ -337,12 +337,14 @@ curl -sk -X POST "https://${MAAS_GW}/maas-api/v1/api-keys" \
   # Retry the smoke test.
   ```
   > **Do NOT patch `maas-api-auth-policy` or `maas-auth-*` AuthPolicies** — they are managed by the maas-controller and any manual patches are overwritten on next reconciliation. The `kubernetesTokenReview.audiences` and TLS config in those policies are correct; only Kuadrant needs a restart to enforce them.
-- `POST /maas-api/v1/api-keys` returns `500` (exception, not auth failure): Authorino TLS not configured, or the `maas-default-gateway-authn-ssl` EnvoyFilter is missing. The EnvoyFilter is created by `odh-model-controller` (not maas-controller) — restart it to force re-reconciliation: `oc rollout restart deployment/odh-model-controller -n redhat-ods-applications`. See the fallback in Step 4 above.
+- `POST /v1/api-keys` returns `500` (exception, not auth failure): Authorino TLS not configured, or the `maas-default-gateway-authn-ssl` EnvoyFilter is missing. The EnvoyFilter is created by `odh-model-controller` (not maas-controller) — restart it to force re-reconciliation: `oc rollout restart deployment/odh-model-controller -n redhat-ods-applications`. See the fallback in Step 4 above.
 - **500 errors on API keys / authorization policies pages** — gateway OCP Route has wrong hostname. Check: `oc get route maas-default-gateway -n openshift-ingress -o jsonpath='{.spec.host}'` must be `maas.<cluster-domain>`. If it shows `maas-default-gateway-openshift-ingress.<cluster-domain>`, re-apply the gateway chart (the chart had a bug where `useOpenShiftRoute=true` used the wrong hostname format). Symptom in `maas-ui` sidecar logs: `statusCode=503 ... invalid character '<'`.
 - Gen AI studio → API keys or Settings → Authorization policies tabs missing in the dashboard: check all MaaS `OdhDashboardConfig` flags (`genAiStudio`, `modelAsService`, `maasAuthPolicies`, `vLLMDeploymentOnMaaS`) — `vLLMDeploymentOnMaaS` is the most commonly missing one.
 - `LLMInferenceService` `HTTPRoutesReady: False` — `NotAllowedByListeners`: model namespace not in `gateway.modelNamespaces`. Re-apply the gateway chart with the correct namespace set.
 - `MaaSAuthPolicy` status loop in controller logs (`"failed to update MaaSAuthPolicy status"`) — harmless controller/CRD version mismatch. Auth and rate limiting work correctly despite this.
 - **EA2 → stable migration (3.4/3.5):** If `maas-controller` or `maas-api` Deployment shows an immutable selector error in the DSC, delete both Deployments and force a DSC reconcile. When upgrading from 3.4 to 3.5, note that the MaaS infrastructure namespace changed from `redhat-ods-applications` to `redhat-ai-gateway-infra` -- stale Deployments in the old namespace should be cleaned up manually.
+- **3.4 → 3.5 upgrade — MaaS API returns 404:** If the MaaS gateway was deployed from the 3.4 chart, it does not include `redhat-ai-gateway-infra` in the `allowedRoutes` namespace list. The `maas-api-route` HTTPRoute (now in `redhat-ai-gateway-infra`) will be `NotAllowedByListeners`. Fix: re-apply the gateway chart — the 3.5 chart includes the new namespace. Verify with `oc get httproute maas-api-route -n redhat-ai-gateway-infra -o jsonpath='{.status.parents[0].conditions[?(@.type=="Accepted")].status}'` — must return `True`.
+- **MaaS API paths (3.5):** Both `/v1/api-keys` and `/maas-api/v1/api-keys` work — the HTTPRoute defines individual rules for `/v1/*` paths plus a catch-all `/maas-api` prefix.
 
 For more MaaS troubleshooting, see: [MaaS Troubleshooting Reference](../reference/maas-troubleshooting.md)
 

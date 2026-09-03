@@ -114,14 +114,14 @@ spec:
           - name: VLLM_NIXL_ABORT_REQUEST_TIMEOUT
             value: {{ .Values.kvTransfer.abortRequestTimeout | quote }}
           - name: VLLM_ADDITIONAL_ARGS
-            value: {{ if eq (.Values.kvTransfer.vllmArgsOrder | default "uvicorn_first") "kv_first" }}"--kv-transfer-config '{\"kv_connector\":\"NixlConnector\",\"kv_role\":\"kv_both\"}' --disable-uvicorn-access-log --block-size {{ .Values.kvTransfer.blockSize }}"{{ else }}"--disable-uvicorn-access-log --kv-transfer-config '{\"kv_connector\":\"NixlConnector\",\"kv_role\":\"kv_both\"}' --block-size {{ .Values.kvTransfer.blockSize }}"{{ end }}
+            value: {{ if eq (.Values.kvTransfer.vllmArgsOrder | default "uvicorn_first") "kv_first" }}"--kv-transfer-config '{\"kv_connector\":\"NixlConnector\",\"kv_role\":\"kv_both\"}' --disable-access-log-for-endpoints=/health,/metrics,/ping --block-size {{ .Values.kvTransfer.blockSize }}"{{ else }}"--disable-access-log-for-endpoints=/health,/metrics,/ping --kv-transfer-config '{\"kv_connector\":\"NixlConnector\",\"kv_role\":\"kv_both\"}' --block-size {{ .Values.kvTransfer.blockSize }}"{{ end }}
           {{- if .Values.kvTransfer.loggingLevel }}
           - name: VLLM_LOGGING_LEVEL
             value: {{ .Values.kvTransfer.loggingLevel | quote }}
           {{- end }}
           {{- else }}
           - name: VLLM_ADDITIONAL_ARGS
-            value: {{ if eq (.Values.kvTransfer.vllmArgsOrder | default "uvicorn_first") "kv_first" }}"--kv-transfer-config '{\"kv_connector\":\"NixlConnector\",\"kv_role\":\"kv_both\"}' --disable-uvicorn-access-log --block-size {{ .Values.kvTransfer.blockSize }}"{{ else }}"--disable-uvicorn-access-log --kv-transfer-config '{\"kv_connector\":\"NixlConnector\",\"kv_role\":\"kv_both\"}' --block-size {{ .Values.kvTransfer.blockSize }}"{{ end }}
+            value: {{ if eq (.Values.kvTransfer.vllmArgsOrder | default "uvicorn_first") "kv_first" }}"--kv-transfer-config '{\"kv_connector\":\"NixlConnector\",\"kv_role\":\"kv_both\"}' --disable-access-log-for-endpoints=/health,/metrics,/ping --block-size {{ .Values.kvTransfer.blockSize }}"{{ else }}"--disable-access-log-for-endpoints=/health,/metrics,/ping --kv-transfer-config '{\"kv_connector\":\"NixlConnector\",\"kv_role\":\"kv_both\"}' --block-size {{ .Values.kvTransfer.blockSize }}"{{ end }}
           - name: VLLM_NIXL_SIDE_CHANNEL_HOST
             valueFrom:
               fieldRef:
@@ -182,12 +182,12 @@ spec:
                 fieldRef:
                   fieldPath: status.podIP
             - name: VLLM_ADDITIONAL_ARGS
-              value: {{ if eq (.Values.kvTransfer.vllmArgsOrder | default "uvicorn_first") "kv_first" }}"--kv-transfer-config '{\"kv_connector\":\"NixlConnector\",\"kv_role\":\"kv_both\"}' --disable-uvicorn-access-log --block-size {{ .Values.kvTransfer.blockSize }}"{{ else }}"--disable-uvicorn-access-log --kv-transfer-config '{\"kv_connector\":\"NixlConnector\",\"kv_role\":\"kv_both\"}' --block-size {{ .Values.kvTransfer.blockSize }}"{{ end }}
+              value: {{ if eq (.Values.kvTransfer.vllmArgsOrder | default "uvicorn_first") "kv_first" }}"--kv-transfer-config '{\"kv_connector\":\"NixlConnector\",\"kv_role\":\"kv_both\"}' --disable-access-log-for-endpoints=/health,/metrics,/ping --block-size {{ .Values.kvTransfer.blockSize }}"{{ else }}"--disable-access-log-for-endpoints=/health,/metrics,/ping --kv-transfer-config '{\"kv_connector\":\"NixlConnector\",\"kv_role\":\"kv_both\"}' --block-size {{ .Values.kvTransfer.blockSize }}"{{ end }}
             - name: VLLM_NIXL_ABORT_REQUEST_TIMEOUT
               value: {{ .Values.kvTransfer.abortRequestTimeout | quote }}
             {{- else }}
             - name: VLLM_ADDITIONAL_ARGS
-              value: {{ if eq (.Values.kvTransfer.vllmArgsOrder | default "uvicorn_first") "kv_first" }}"--kv-transfer-config '{\"kv_connector\":\"NixlConnector\",\"kv_role\":\"kv_both\"}' --disable-uvicorn-access-log --block-size {{ .Values.kvTransfer.blockSize }}"{{ else }}"--disable-uvicorn-access-log --kv-transfer-config '{\"kv_connector\":\"NixlConnector\",\"kv_role\":\"kv_both\"}' --block-size {{ .Values.kvTransfer.blockSize }}"{{ end }}
+              value: {{ if eq (.Values.kvTransfer.vllmArgsOrder | default "uvicorn_first") "kv_first" }}"--kv-transfer-config '{\"kv_connector\":\"NixlConnector\",\"kv_role\":\"kv_both\"}' --disable-access-log-for-endpoints=/health,/metrics,/ping --block-size {{ .Values.kvTransfer.blockSize }}"{{ else }}"--disable-access-log-for-endpoints=/health,/metrics,/ping --kv-transfer-config '{\"kv_connector\":\"NixlConnector\",\"kv_role\":\"kv_both\"}' --block-size {{ .Values.kvTransfer.blockSize }}"{{ end }}
             - name: VLLM_NIXL_SIDE_CHANNEL_HOST
               valueFrom:
                 fieldRef:

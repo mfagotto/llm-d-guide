@@ -1,66 +1,61 @@
 #!/bin/bash
 
-echo "=== Checking Required Operators ==="
+OCP_MINOR=$(oc version -o json 2>/dev/null | jq -r '.openshiftVersion' | cut -d. -f2)
 
-# Check Cert Manager
-echo -n "Cert Manager: "
-oc get csv -A | grep -q "cert-manager" && echo "OK" || echo "MISSING"
+FAILURES=0
 
-# Check Service Mesh 3
-echo -n "Service Mesh 3: "
-oc get csv -n openshift-operators | grep -q "servicemesh" && echo "OK" || echo "MISSING"
+check_operator() {
+  local label="$1"
+  local csv_pattern="$2"
+  local csv_namespace="$3"
+  local ce_name="$4"
+  local required="${5:-true}"
 
-# Check Connectivity Link (RHOAI 3.0+)
-echo -n "Connectivity Link: "
-oc get csv -n openshift-operators | grep -q "rhcl-operator" && echo "OK" || echo "NOT FOUND (required for RHOAI 3.0+)"
+  echo -n "${label}: "
 
-# Check OpenShift AI
-echo -n "OpenShift AI: "
-oc get csv -n redhat-ods-operator | grep -q "rhods\|openshift-ai" && echo "OK" || echo "MISSING"
+  if oc get csv -n "${csv_namespace}" 2>/dev/null | grep -q "${csv_pattern}"; then
+    echo "OK (OLMv0)"
+    return 0
+  fi
 
-# Check NFD
-echo -n "Node Feature Discovery: "
-oc get csv -A | grep -q "nfd" && echo "OK" || echo "MISSING"
+  if [[ -n "${ce_name}" ]] && oc get clusterextension "${ce_name}" &>/dev/null; then
+    local installed
+    installed=$(oc get clusterextension "${ce_name}" -o jsonpath='{.status.conditions[?(@.type=="Installed")].status}' 2>/dev/null)
+    if [[ "${installed}" == "True" ]]; then
+      echo "OK (OLMv1)"
+      return 0
+    else
+      echo "INSTALLING (OLMv1 — Installed=${installed})"
+      FAILURES=$((FAILURES + 1))
+      return 1
+    fi
+  fi
 
-# Check NVIDIA GPU Operator
-echo -n "NVIDIA GPU Operator: "
-oc get csv -n nvidia-gpu-operator | grep -q "gpu-operator" && echo "OK" || echo "MISSING"
+  if [[ "${required}" == "true" ]]; then
+    echo "MISSING"
+    FAILURES=$((FAILURES + 1))
+  else
+    echo "MISSING (optional)"
+  fi
+  return 0
+}
+
+echo "=== Checking Required Operators (OCP 4.${OCP_MINOR}) ==="
+
+check_operator "Cert Manager" "cert-manager" "cert-manager-operator" "cert-manager-operator"
+check_operator "Service Mesh 3" "servicemesh" "openshift-operators" ""
+check_operator "Connectivity Link" "rhcl-operator" "openshift-operators" "rhcl-operator"
+check_operator "OpenShift AI" "rhods" "redhat-ods-operator" "rhods-operator"
+check_operator "Leader Worker Set" "leader-worker-set" "openshift-lws-operator" "leader-worker-set"
+check_operator "Node Feature Discovery" "nfd" "openshift-nfd" "nfd"
+check_operator "NVIDIA GPU Operator" "gpu-operator" "nvidia-gpu-operator" "gpu-operator-certified"
 
 echo ""
-echo "=== Monitoring operators (RHOAI 3.3) ==="
+echo "=== Monitoring Operators ==="
 
-# Check Cluster Observability Operator
-echo -n "Cluster Observability Operator: "
-if oc get subscription openshift-cluster-observability-operator -n openshift-cluster-observability-operator &>/dev/null; then
-  phase=$(oc get csv -n openshift-cluster-observability-operator -o jsonpath='{.items[*].status.phase}' 2>/dev/null)
-  case "$phase" in *Succeeded*) echo "OK";; *) echo "INSTALLING or FAILED (phase: $phase)";; esac
-else
-  echo "MISSING (Subscription not found)"
-fi
+check_operator "Cluster Observability Operator" "cluster-observability" "openshift-cluster-observability-operator" "cluster-observability-operator"
+check_operator "Tempo Operator" "tempo" "openshift-tempo-operator" "tempo-product"
+check_operator "OpenTelemetry Operator" "opentelemetry" "openshift-opentelemetry-operator" "opentelemetry-product"
+check_operator "Grafana Operator" "grafana" "grafana-operator" "" "false"
 
-# Check Tempo Operator
-echo -n "Tempo Operator: "
-if oc get subscription tempo-product -n openshift-tempo-operator &>/dev/null; then
-  phase=$(oc get csv -n openshift-tempo-operator -o jsonpath='{.items[*].status.phase}' 2>/dev/null)
-  case "$phase" in *Succeeded*) echo "OK";; *) echo "INSTALLING or FAILED (phase: $phase)";; esac
-else
-  echo "MISSING (Subscription not found)"
-fi
-
-# Check OpenTelemetry Operator
-echo -n "OpenTelemetry Operator: "
-if oc get subscription opentelemetry-product -n openshift-opentelemetry-operator &>/dev/null; then
-  phase=$(oc get csv -n openshift-opentelemetry-operator -o jsonpath='{.items[*].status.phase}' 2>/dev/null)
-  case "$phase" in *Succeeded*) echo "OK";; *) echo "INSTALLING or FAILED (phase: $phase)";; esac
-else
-  echo "MISSING (Subscription not found)"
-fi
-
-# Check Grafana Operator (optional)
-echo -n "Grafana Operator: "
-if oc get subscription grafana-operator -n grafana-operator &>/dev/null; then
-  phase=$(oc get csv -n grafana-operator -o jsonpath='{.items[*].status.phase}' 2>/dev/null)
-  case "$phase" in *Succeeded*) echo "OK";; *) echo "INSTALLING or FAILED (phase: $phase)";; esac
-else
-  echo "MISSING (optional)"
-fi
+exit ${FAILURES}

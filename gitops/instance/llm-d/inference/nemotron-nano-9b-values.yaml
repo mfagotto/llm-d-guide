@@ -27,7 +27,7 @@ vllm:
   prefixCaching:
     enabled: auto
   extraArgs:
-    - "--disable-uvicorn-access-log"
+    - "--disable-access-log-for-endpoints=/health,/metrics,/ping"
     - "--enable-auto-tool-choice"
     - "--tool-call-parser=hermes"
     - "--trust-remote-code"

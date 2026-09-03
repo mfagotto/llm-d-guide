@@ -750,6 +750,7 @@ Reference material:
 - [Validation Commands](docs/reference/validation.md)
 - [MaaS Troubleshooting](docs/reference/maas-troubleshooting.md)
 - [ExternalModel Guide](docs/reference/external-models.md)
+- [Migration 3.4 → 3.5](docs/reference/migration-3.4-to-3.5.md)
 
 ---
 

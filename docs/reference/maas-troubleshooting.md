@@ -60,7 +60,7 @@ set `maas.enabled=true` in the inference chart.
 
 ## Authorino TLS is mandatory for the API key endpoint
 
-Without Authorino TLS, `POST /maas-api/v1/api-keys` returns `500`. The gateway annotation must be
+Without Authorino TLS, `POST /v1/api-keys` returns `500`. The gateway annotation must be
 applied (or removed and re-applied) **after** Authorino TLS is configured — the maas-controller
 creates the `maas-default-gateway-authn-ssl` EnvoyFilter only in reaction to an annotation change.
 

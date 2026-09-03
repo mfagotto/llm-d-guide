@@ -129,7 +129,7 @@ Deploy the gateway, a namespace, and an LLMInferenceService, then test the endpo
 - The default hardware profile is `gpu-profile` (auto-selected when `gpuCount > 0`). Set it explicitly in the per-model values file for clarity.
 - **RHOAI 3.5 breaking change:** The API group for `InferenceObjective` and `EndpointPickerConfig` changed from `inference.networking.x-k8s.io` to `llm-d.ai`. The `saturationDetector` field moved to `flowControl.saturationDetector` with a plugin-reference pattern.
 - **RHOAI 3.5 change:** The default EPP scheduler adds two new scorers: `kv-cache-utilization-scorer` and `no-hit-lru-scorer` alongside `queue-scorer` and `prefix-cache-scorer`.
-- **RHOAI 3.5 change:** vLLM access-log flag changed from `--disable-uvicorn-access-log` to `--disable-access-log-for-endpoints /health,/metrics,/ping`.
+- **RHOAI 3.5 change:** vLLM access-log flag `--disable-uvicorn-access-log` is deprecated; use `--disable-access-log-for-endpoints=/health,/metrics,/ping` instead. The old flag still works on vLLM 0.18.0.
 - Verify intelligent routing and monitoring integration after deployment.
 **Full guide:** [docs/phases/05-llmd-quickstart.md](docs/phases/05-llmd-quickstart.md)
 
@@ -151,6 +151,7 @@ Deploy the MaaS gateway, configure Authorino TLS, bootstrap the subscription sta
 - [Validation Commands](docs/reference/validation.md) — `oc get` checks for operators, CRDs, gateways, MaaS
 - [MaaS Troubleshooting](docs/reference/maas-troubleshooting.md) — Key facts, gotchas, token rate limiting, dashboard flags
 - [ExternalModel Guide](docs/reference/external-models.md) — Credential injection, MaaSModelRef naming, monitoring
+- [Migration 3.4 → 3.5](docs/reference/migration-3.4-to-3.5.md) — Breaking changes, MaaS namespace move, vLLM flag deprecation, upgrade checklist
 
 ---
 

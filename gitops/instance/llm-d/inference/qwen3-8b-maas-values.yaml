@@ -27,7 +27,7 @@ vllm:
   prefixCaching:
     enabled: auto  # Auto-enabled for intelligent-inference
   extraArgs:
-    - "--disable-uvicorn-access-log"
+    - "--disable-access-log-for-endpoints=/health,/metrics,/ping"
     - "--enable-auto-tool-choice"
     - "--tool-call-parser=hermes"
 
